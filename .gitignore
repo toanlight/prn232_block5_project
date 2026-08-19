@@ -1,0 +1,204 @@
+# ==========================================
+# .NET / Visual Studio
+# ==========================================
+
+# Build results
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa]rm/
+[Aa]rm64/
+
+# Visual Studio
+.vs/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.rsuser
+
+# Visual Studio Code
+.vscode/
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+
+# ==========================================
+# NuGet
+# ==========================================
+
+*.nupkg
+*.snupkg
+**/packages/*
+.nuget/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# NuGet package restore
+packages.lock.json
+
+# ==========================================
+# ASP.NET Core
+# ==========================================
+
+# User secrets
+appsettings.*.json
+!appsettings.json
+
+# Local development configuration
+.env
+.env.*
+!.env.example
+
+# HTTPS development certificates
+*.pfx
+*.p12
+
+# ASP.NET Core generated files
+wwwroot/lib/
+wwwroot/dist/
+
+# ==========================================
+# Entity Framework Core
+# ==========================================
+
+# Local database files
+*.mdf
+*.ldf
+*.ndf
+*.db
+*.sqlite
+*.sqlite3
+
+# ==========================================
+# Logs
+# ==========================================
+
+*.log
+logs/
+Log/
+Logs/
+
+# ==========================================
+# Test Results / Coverage
+# ==========================================
+
+TestResults/
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
+coverage-report/
+
+# ==========================================
+# Generated files
+# ==========================================
+
+Generated/
+GeneratedCode/
+*.generated.cs
+*.designer.cs
+
+# ==========================================
+# Publish
+# ==========================================
+
+publish/
+Publish/
+*.pubxml
+*.publishproj
+
+# ==========================================
+# Docker
+# ==========================================
+
+*.dockerfile
+docker-compose.override.yml
+
+# ==========================================
+# OS generated files
+# ==========================================
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+
+# ==========================================
+# Temporary files
+# ==========================================
+
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+
+# ==========================================
+# Rider
+# ==========================================
+
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# ==========================================
+# Database / Local development
+# ==========================================
+
+*.bacpac
+*.dacpac
+
+# ==========================================
+# Node.js (if MVC/API uses npm)
+# ==========================================
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ==========================================
+# Frontend build output
+# ==========================================
+
+dist/
+build/
+
+# ==========================================
+# Secrets / Credentials
+# ==========================================
+
+secrets.json
+credentials.json
+client_secret.json
+service-account*.json
+
+# Google / Azure credentials
+*.pem
+*.key
+
+# ==========================================
+# Local configuration
+# ==========================================
+
+appsettings.Development.json
+appsettings.Staging.json
+appsettings.Production.json
