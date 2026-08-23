@@ -5,27 +5,27 @@ using ClonEbay_CoreAPI.Common.Models;
 using ClonEbay_CoreAPI.DTOs.Auth;
 using ClonEbay_CoreAPI.Exceptions;
 using ClonEbay_CoreAPI.Models;
+using ClonEbay_CoreAPI.Repositories.Interfaces;
 using ClonEbay_CoreAPI.Services.Interfaces;
-using Microsoft.EntityFrameworkCore;
 
 namespace ClonEbay_CoreAPI.Services.Implementations
 {
     public class AuthService : IAuthService
     {
-        private readonly CloneEbayDbContext _context;
+        private readonly IUserRepository _userRepository;
         private readonly IJwtService _jwtService;
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
         private readonly ILogger<AuthService> _logger;
 
         public AuthService(
-            CloneEbayDbContext context,
+            IUserRepository userRepository,
             IJwtService jwtService,
             IEmailService emailService,
             IConfiguration configuration,
             ILogger<AuthService> logger)
         {
-            _context = context;
+            _userRepository = userRepository;
             _jwtService = jwtService;
             _emailService = emailService;
             _configuration = configuration;
@@ -34,15 +34,15 @@ namespace ClonEbay_CoreAPI.Services.Implementations
 
         public async Task<ApiResponse<UserInfoDto>> RegisterAsync(RegisterRequestDto request)
         {
-            // 1. Kiểm tra Email đã tồn tại chưa
-            var emailExists = await _context.Users.AnyAsync(u => u.Email == request.Email.Trim().ToLower());
+            // 1. Kiểm tra Email đã tồn tại qua Repository
+            var emailExists = await _userRepository.ExistsByEmailAsync(request.Email);
             if (emailExists)
             {
                 throw new BadRequestException("Địa chỉ email này đã được sử dụng. Vui lòng chọn email khác.");
             }
 
-            // 2. Kiểm tra Username đã tồn tại chưa
-            var usernameExists = await _context.Users.AnyAsync(u => u.Username == request.Username.Trim());
+            // 2. Kiểm tra Username đã tồn tại qua Repository
+            var usernameExists = await _userRepository.ExistsByUsernameAsync(request.Username);
             if (usernameExists)
             {
                 throw new BadRequestException("Tên đăng nhập này đã được sử dụng. Vui lòng chọn tên khác.");
@@ -55,7 +55,7 @@ namespace ClonEbay_CoreAPI.Services.Implementations
             var otpCode = RandomNumberGenerator.GetInt32(100000, 999999).ToString();
             var otpExpiry = DateTime.UtcNow.AddMinutes(10);
 
-            // 5. Tạo User mới trong DB
+            // 5. Tạo User mới và lưu qua Repository
             var user = new User
             {
                 Username = request.Username.Trim(),
@@ -71,8 +71,8 @@ namespace ClonEbay_CoreAPI.Services.Implementations
                 UpdatedAt = DateTime.UtcNow
             };
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            await _userRepository.AddAsync(user);
+            await _userRepository.SaveChangesAsync();
 
             // 6. Gửi email xác nhận
             await _emailService.SendVerificationEmailAsync(user.Email, user.Username, otpCode);
@@ -94,7 +94,7 @@ namespace ClonEbay_CoreAPI.Services.Implementations
 
         public async Task<ApiResponse<bool>> VerifyOtpAsync(VerifyOtpRequestDto request)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email.Trim().ToLower());
+            var user = await _userRepository.GetByEmailAsync(request.Email);
             if (user == null)
             {
                 throw new NotFoundException("Không tìm thấy tài khoản với email này.");
@@ -121,14 +121,15 @@ namespace ClonEbay_CoreAPI.Services.Implementations
             user.VerificationExpiry = null;
             user.UpdatedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
+            _userRepository.Update(user);
+            await _userRepository.SaveChangesAsync();
 
             return ApiResponse<bool>.Ok(true, "Xác thực email thành công! Bạn có thể đăng nhập ngay bây giờ.");
         }
 
         public async Task<ApiResponse<bool>> ResendOtpAsync(ResendOtpRequestDto request)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email.Trim().ToLower());
+            var user = await _userRepository.GetByEmailAsync(request.Email);
             if (user == null)
             {
                 throw new NotFoundException("Không tìm thấy tài khoản với email này.");
@@ -145,7 +146,8 @@ namespace ClonEbay_CoreAPI.Services.Implementations
             user.VerificationExpiry = DateTime.UtcNow.AddMinutes(10);
             user.UpdatedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
+            _userRepository.Update(user);
+            await _userRepository.SaveChangesAsync();
 
             if (string.IsNullOrEmpty(user.Email))
             {
@@ -159,12 +161,8 @@ namespace ClonEbay_CoreAPI.Services.Implementations
 
         public async Task<ApiResponse<AuthResponseDto>> LoginAsync(LoginRequestDto request)
         {
-            var usernameOrEmail = request.UsernameOrEmail.Trim().ToLower();
-
-            // Tìm User bằng Username hoặc Email
-            var user = await _context.Users.FirstOrDefaultAsync(u =>
-                (u.Email != null && u.Email.ToLower() == usernameOrEmail) || 
-                (u.Username != null && u.Username.ToLower() == usernameOrEmail));
+            // Tìm User bằng Username hoặc Email qua Repository
+            var user = await _userRepository.GetByUsernameOrEmailAsync(request.UsernameOrEmail);
 
             if (user == null)
             {
@@ -179,7 +177,6 @@ namespace ClonEbay_CoreAPI.Services.Implementations
             }
             catch
             {
-                // Fallback nếu password cũ chưa hash
                 isPasswordValid = user.Password == request.Password;
             }
 
@@ -188,7 +185,7 @@ namespace ClonEbay_CoreAPI.Services.Implementations
                 throw new UnauthorizedException("Tên đăng nhập hoặc mật khẩu không chính xác.");
             }
 
-            // Kiểm tra xem đã kích hoạt email chưa (Acceptance Criteria của SCRUM-6/7)
+            // Kiểm tra kích hoạt email
             if (!user.IsEmailVerified)
             {
                 throw new BadRequestException("Tài khoản chưa được kích hoạt email. Vui lòng xác thực email trước khi đăng nhập.");
@@ -204,7 +201,8 @@ namespace ClonEbay_CoreAPI.Services.Implementations
             user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(refreshExpiryDays);
             user.UpdatedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
+            _userRepository.Update(user);
+            await _userRepository.SaveChangesAsync();
 
             var response = new AuthResponseDto
             {
@@ -241,7 +239,7 @@ namespace ClonEbay_CoreAPI.Services.Implementations
                 throw new UnauthorizedException("Token không chứa thông tin User hợp lệ.");
             }
 
-            var user = await _context.Users.FindAsync(userId);
+            var user = await _userRepository.GetByIdAsync(userId);
             if (user == null || user.RefreshToken != request.RefreshToken || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
             {
                 throw new UnauthorizedException("Refresh Token không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.");
@@ -256,7 +254,8 @@ namespace ClonEbay_CoreAPI.Services.Implementations
             user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(refreshExpiryDays);
             user.UpdatedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
+            _userRepository.Update(user);
+            await _userRepository.SaveChangesAsync();
 
             var response = new AuthResponseDto
             {
@@ -281,13 +280,14 @@ namespace ClonEbay_CoreAPI.Services.Implementations
 
         public async Task<ApiResponse<bool>> LogoutAsync(int userId)
         {
-            var user = await _context.Users.FindAsync(userId);
+            var user = await _userRepository.GetByIdAsync(userId);
             if (user != null)
             {
                 user.RefreshToken = null;
                 user.RefreshTokenExpiryTime = null;
                 user.UpdatedAt = DateTime.UtcNow;
-                await _context.SaveChangesAsync();
+                _userRepository.Update(user);
+                await _userRepository.SaveChangesAsync();
             }
 
             return ApiResponse<bool>.Ok(true, "Đăng xuất thành công.");
