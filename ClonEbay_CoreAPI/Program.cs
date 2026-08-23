@@ -32,13 +32,17 @@ try
         options.UseSqlServer(connectionString);
     });
 
-    // 2. Đăng ký Services (DI)
+    // 2. Đăng ký Repositories (Data Access Layer)
+    builder.Services.AddScoped(typeof(ClonEbay_CoreAPI.Repositories.Interfaces.IGenericRepository<>), typeof(ClonEbay_CoreAPI.Repositories.Implementations.GenericRepository<>));
+    builder.Services.AddScoped<ClonEbay_CoreAPI.Repositories.Interfaces.IUserRepository, ClonEbay_CoreAPI.Repositories.Implementations.UserRepository>();
+
+    // 3. Đăng ký Services (Business Logic Layer)
     builder.Services.AddScoped<IEmailService, EmailService>();
     builder.Services.AddScoped<IJwtService, JwtService>();
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<IUserService, UserService>();
 
-    // 3. Cấu hình JWT Authentication
+    // 4. Cấu hình JWT Authentication
     var jwtSecretKey = builder.Configuration["JwtSettings:SecretKey"] 
         ?? "YourSuperSecretCloneEbayPRN232SecretKeyForJwtAuthenticationWhichIsVeryLongAndSecure!";
     var jwtIssuer = builder.Configuration["JwtSettings:Issuer"] ?? "CloneEbay_CoreAPI";

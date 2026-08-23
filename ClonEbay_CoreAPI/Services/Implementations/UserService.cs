@@ -2,28 +2,25 @@ using BCrypt.Net;
 using ClonEbay_CoreAPI.Common.Models;
 using ClonEbay_CoreAPI.DTOs.User;
 using ClonEbay_CoreAPI.Exceptions;
-using ClonEbay_CoreAPI.Models;
+using ClonEbay_CoreAPI.Repositories.Interfaces;
 using ClonEbay_CoreAPI.Services.Interfaces;
-using Microsoft.EntityFrameworkCore;
 
 namespace ClonEbay_CoreAPI.Services.Implementations
 {
     public class UserService : IUserService
     {
-        private readonly CloneEbayDbContext _context;
+        private readonly IUserRepository _userRepository;
         private readonly ILogger<UserService> _logger;
 
-        public UserService(CloneEbayDbContext context, ILogger<UserService> logger)
+        public UserService(IUserRepository userRepository, ILogger<UserService> logger)
         {
-            _context = context;
+            _userRepository = userRepository;
             _logger = logger;
         }
 
         public async Task<ApiResponse<UserProfileDto>> GetProfileAsync(int userId)
         {
-            var user = await _context.Users
-                .Include(u => u.Addresses)
-                .FirstOrDefaultAsync(u => u.Id == userId);
+            var user = await _userRepository.GetUserWithAddressesAsync(userId);
 
             if (user == null)
             {
@@ -56,7 +53,7 @@ namespace ClonEbay_CoreAPI.Services.Implementations
 
         public async Task<ApiResponse<UserProfileDto>> UpdateProfileAsync(int userId, UpdateProfileRequestDto request)
         {
-            var user = await _context.Users.FindAsync(userId);
+            var user = await _userRepository.GetByIdAsync(userId);
             if (user == null)
             {
                 throw new NotFoundException("Không tìm thấy người dùng.");
@@ -70,14 +67,15 @@ namespace ClonEbay_CoreAPI.Services.Implementations
             }
             user.UpdatedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
+            _userRepository.Update(user);
+            await _userRepository.SaveChangesAsync();
 
             return await GetProfileAsync(userId);
         }
 
         public async Task<ApiResponse<bool>> ChangePasswordAsync(int userId, ChangePasswordRequestDto request)
         {
-            var user = await _context.Users.FindAsync(userId);
+            var user = await _userRepository.GetByIdAsync(userId);
             if (user == null)
             {
                 throw new NotFoundException("Không tìm thấy người dùng.");
@@ -101,7 +99,8 @@ namespace ClonEbay_CoreAPI.Services.Implementations
             user.Password = BCrypt.Net.BCrypt.HashPassword(request.NewPassword, workFactor: 12);
             user.UpdatedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
+            _userRepository.Update(user);
+            await _userRepository.SaveChangesAsync();
 
             return ApiResponse<bool>.Ok(true, "Đổi mật khẩu thành công!");
         }
