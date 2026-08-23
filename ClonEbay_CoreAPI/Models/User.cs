@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace ClonEbay_CoreAPI.Models;
@@ -13,9 +13,27 @@ public partial class User
 
     public string? Password { get; set; }
 
-    public string? Role { get; set; }
+    public string? FullName { get; set; }
+
+    public string? Phone { get; set; }
+
+    public string? Role { get; set; } = "User";
 
     public string? AvatarUrl { get; set; }
+
+    public bool IsEmailVerified { get; set; } = false;
+
+    public string? VerificationCode { get; set; }
+
+    public DateTime? VerificationExpiry { get; set; }
+
+    public string? RefreshToken { get; set; }
+
+    public DateTime? RefreshTokenExpiryTime { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     public virtual ICollection<Address> Addresses { get; set; } = new List<Address>();
 

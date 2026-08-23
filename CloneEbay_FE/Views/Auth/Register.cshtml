@@ -1,0 +1,98 @@
+@model CloneEbay_FE.Models.RegisterViewModel
+@{
+    ViewData["Title"] = "Đăng ký tài khoản";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-7 col-lg-6">
+        <div class="auth-card">
+            <div class="text-center mb-4">
+                <h2 class="fw-bold mb-2">Tạo tài khoản CloneEbay</h2>
+                <p class="text-muted">Đăng ký để tham gia đấu giá và mua bán trực tuyến ngay hôm nay</p>
+            </div>
+
+            <form asp-action="Register" method="post" id="registerForm">
+                @Html.AntiForgeryToken()
+
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label asp-for="FullName" class="form-label fw-semibold"></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-person"></i></span>
+                            <input asp-for="FullName" class="form-control" placeholder="Nguyễn Văn A" />
+                        </div>
+                        <span asp-validation-for="FullName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Username" class="form-label fw-semibold"></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-at"></i></span>
+                            <input asp-for="Username" class="form-control" placeholder="username123" />
+                        </div>
+                        <span asp-validation-for="Username" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Phone" class="form-label fw-semibold"></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-telephone"></i></span>
+                            <input asp-for="Phone" class="form-control" placeholder="0912345678" />
+                        </div>
+                        <span asp-validation-for="Phone" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-12 mb-3">
+                        <label asp-for="Email" class="form-label fw-semibold"></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-envelope"></i></span>
+                            <input asp-for="Email" class="form-control" type="email" placeholder="example@gmail.com" />
+                        </div>
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                        <div class="form-text">Mã xác thực OTP sẽ được gửi đến email này.</div>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Password" class="form-label fw-semibold"></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-lock"></i></span>
+                            <input asp-for="Password" class="form-control" type="password" placeholder="••••••••" />
+                        </div>
+                        <span asp-validation-for="Password" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-4">
+                        <label asp-for="ConfirmPassword" class="form-label fw-semibold"></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-shield-check"></i></span>
+                            <input asp-for="ConfirmPassword" class="form-control" type="password" placeholder="••••••••" />
+                        </div>
+                        <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <div class="form-check mb-4">
+                    <input class="form-check-input" type="checkbox" id="termsCheck" required checked>
+                    <label class="form-check-label text-muted small" for="termsCheck">
+                        Tôi đồng ý với <a href="#" class="text-decoration-none">Điều khoản dịch vụ</a> và <a href="#" class="text-decoration-none">Chính sách bảo mật</a> của CloneEbay.
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-ebay-primary w-100 py-2 fs-6 mb-3 shadow-sm">
+                    <i class="bi bi-person-plus me-1"></i> Tạo tài khoản
+                </button>
+
+                <div class="text-center">
+                    <span class="text-muted">Đã có tài khoản?</span>
+                    <a asp-action="Login" class="fw-semibold text-primary text-decoration-none ms-1">Đăng nhập ngay</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
