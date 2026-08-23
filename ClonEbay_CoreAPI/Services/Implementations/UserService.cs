@@ -1,5 +1,6 @@
 using BCrypt.Net;
 using ClonEbay_CoreAPI.Common.Models;
+using ClonEbay_CoreAPI.DTOs.Address;
 using ClonEbay_CoreAPI.DTOs.User;
 using ClonEbay_CoreAPI.Exceptions;
 using ClonEbay_CoreAPI.Repositories.Interfaces;
@@ -41,10 +42,14 @@ namespace ClonEbay_CoreAPI.Services.Implementations
                 Addresses = user.Addresses.Select(a => new AddressDto
                 {
                     Id = a.Id,
-                    Street = a.Street,
-                    City = a.City,
+                    FullName = a.FullName ?? string.Empty,
+                    Phone = a.Phone ?? string.Empty,
+                    Street = a.Street ?? string.Empty,
+                    City = a.City ?? string.Empty,
                     State = a.State,
-                    Country = a.Country
+                    Country = a.Country ?? string.Empty,
+                    PostalCode = a.PostalCode,
+                    IsDefault = a.IsDefault
                 }).ToList()
             };
 
