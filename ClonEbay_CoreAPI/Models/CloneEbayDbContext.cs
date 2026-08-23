@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 
@@ -50,8 +50,12 @@ public partial class CloneEbayDbContext : DbContext
     public virtual DbSet<User> Users { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Server=.\\SQLEXPRESS;Database=CloneEbayDB;User Id=sa;Password=123;TrustServerCertificate=True");
+    {
+        if (!optionsBuilder.IsConfigured)
+        {
+            optionsBuilder.UseSqlServer("Server=.\\SQLEXPRESS;Database=CloneEbayDB;User Id=sa;Password=123;TrustServerCertificate=True");
+        }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -468,6 +472,33 @@ public partial class CloneEbayDbContext : DbContext
             entity.Property(e => e.Username)
                 .HasMaxLength(100)
                 .HasColumnName("username");
+            entity.Property(e => e.FullName)
+                .HasMaxLength(100)
+                .HasColumnName("fullName");
+            entity.Property(e => e.Phone)
+                .HasMaxLength(20)
+                .HasColumnName("phone");
+            entity.Property(e => e.IsEmailVerified)
+                .HasDefaultValue(false)
+                .HasColumnName("isEmailVerified");
+            entity.Property(e => e.VerificationCode)
+                .HasMaxLength(50)
+                .HasColumnName("verificationCode");
+            entity.Property(e => e.VerificationExpiry)
+                .HasColumnType("datetime")
+                .HasColumnName("verificationExpiry");
+            entity.Property(e => e.RefreshToken)
+                .HasMaxLength(255)
+                .HasColumnName("refreshToken");
+            entity.Property(e => e.RefreshTokenExpiryTime)
+                .HasColumnType("datetime")
+                .HasColumnName("refreshTokenExpiryTime");
+            entity.Property(e => e.CreatedAt)
+                .HasColumnType("datetime")
+                .HasColumnName("createdAt");
+            entity.Property(e => e.UpdatedAt)
+                .HasColumnType("datetime")
+                .HasColumnName("updatedAt");
         });
 
         OnModelCreatingPartial(modelBuilder);
