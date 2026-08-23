@@ -1,0 +1,12 @@
+using System.ComponentModel.DataAnnotations;
+namespace CloneEbay_FE.Models;
+public sealed class CategoryViewModel { public int Id { get; set; } public string Name { get; set; } = string.Empty; }
+public class ProductCardViewModel { public int Id { get; set; } public string Title { get; set; } = string.Empty; public decimal Price { get; set; } public string? ImageUrl { get; set; } public string? CategoryName { get; set; } public bool IsAuction { get; set; } public decimal AverageRating { get; set; } public int ReviewCount { get; set; } }
+public sealed class ProductDetailViewModel : ProductCardViewModel { public string? Description { get; set; } public DateTime? AuctionEndTime { get; set; } public SellerViewModel? Seller { get; set; } public List<ReviewViewModel> Reviews { get; set; } = []; }
+public sealed class SellerViewModel { public int Id { get; set; } public string Name { get; set; } = string.Empty; public string? AvatarUrl { get; set; } }
+public sealed class ReviewViewModel { public int Id { get; set; } public int Rating { get; set; } public string? Comment { get; set; } public string ReviewerName { get; set; } = string.Empty; public DateTime? CreatedAt { get; set; } }
+public sealed class PagedProductViewModel { public List<ProductCardViewModel> Items { get; set; } = []; public int Page { get; set; } public int PageSize { get; set; } public int TotalItems { get; set; } public int TotalPages { get; set; } }
+public sealed class ProductIndexViewModel { public PagedProductViewModel Results { get; set; } = new(); public List<CategoryViewModel> Categories { get; set; } = []; public string? Search { get; set; } public int? CategoryId { get; set; } public decimal? MinPrice { get; set; } public decimal? MaxPrice { get; set; } }
+public sealed class CartItemViewModel { public int ProductId { get; set; } public string Title { get; set; } = string.Empty; public string? ImageUrl { get; set; } public decimal UnitPrice { get; set; } public int Quantity { get; set; } public decimal LineTotal { get; set; } }
+public sealed class CartViewModel { public List<CartItemViewModel> Items { get; set; } = []; public decimal Total { get; set; } public int ItemCount { get; set; } }
+public sealed class AddCartItemViewModel { [Range(1, int.MaxValue)] public int ProductId { get; set; } [Range(1, 99)] public int Quantity { get; set; } = 1; public string Title { get; set; } = string.Empty; public string? ImageUrl { get; set; } public decimal UnitPrice { get; set; } }

@@ -158,6 +158,8 @@
             </a>
 
             <div class="d-flex align-items-center gap-2">
+                <a asp-controller="Products" asp-action="Index" class="nav-link-custom">Sản phẩm</a>
+                <a asp-controller="Cart" asp-action="Index" class="nav-link-custom"><i class="bi bi-cart3"></i> Giỏ hàng</a>
                 @if (isLoggedIn)
                 {
                     <a asp-controller="Profile" asp-action="Index" class="nav-link-custom d-flex align-items-center gap-2">

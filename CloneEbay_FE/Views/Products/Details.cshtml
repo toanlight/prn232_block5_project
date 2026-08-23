@@ -1,0 +1,249 @@
+@model CloneEbay_FE.Models.ProductDetailViewModel
+@{
+    ViewData["Title"] = Model.Title;
+    var loggedIn = Context.Session.GetString("AccessToken") is not null;
+}
+
+<div class="mb-3">
+    <a asp-controller="Products" asp-action="Index" class="text-decoration-none text-muted small">
+        <i class="bi bi-arrow-left"></i> Quay lại danh sách
+    </a>
+</div>
+
+@* ── Thông tin chính ── *@
+<div class="row g-4">
+
+    @* Cột ảnh *@
+    <div class="col-12 col-md-6">
+        <div class="bg-white rounded-4 shadow-sm overflow-hidden" style="aspect-ratio:1/1">
+            @if (!string.IsNullOrWhiteSpace(Model.ImageUrl))
+            {
+                <img src="@Model.ImageUrl"
+                     class="w-100 h-100 object-fit-cover"
+                     alt="@Model.Title"
+                     onerror="this.src=''; this.parentElement.innerHTML='<div class=\'d-flex align-items-center justify-content-center h-100 bg-light\'><i class=\'bi bi-image text-muted\' style=\'font-size:4rem\'></i></div>'" />
+            }
+            else
+            {
+                <div class="d-flex align-items-center justify-content-center h-100 bg-light">
+                    <i class="bi bi-image text-muted" style="font-size: 4rem"></i>
+                </div>
+            }
+        </div>
+    </div>
+
+    @* Cột thông tin *@
+    <div class="col-12 col-md-6">
+
+        @* Danh mục & badge *@
+        <div class="d-flex gap-2 mb-2">
+            <span class="badge text-bg-light border">@(Model.CategoryName ?? "Chưa phân loại")</span>
+            @if (Model.IsAuction)
+            {
+                <span class="badge bg-warning text-dark"><i class="bi bi-hammer"></i> Đấu giá</span>
+            }
+        </div>
+
+        @* Tên sản phẩm *@
+        <h1 class="h2 mb-2">@Model.Title</h1>
+
+        @* Đánh giá tổng quan *@
+        <div class="d-flex align-items-center gap-2 mb-3">
+            @for (int i = 1; i <= 5; i++)
+            {
+                <i class="bi @(i <= (int)Math.Round(Model.AverageRating) ? "bi-star-fill text-warning" : "bi-star text-muted")"></i>
+            }
+            <span class="fw-semibold">@Model.AverageRating</span>
+            <span class="text-muted">(@Model.ReviewCount đánh giá)</span>
+        </div>
+
+        @* Giá *@
+        <div class="display-6 fw-bold text-danger mb-3">
+            @Model.Price.ToString("N0") ₫
+        </div>
+
+        @* Mô tả *@
+        @if (!string.IsNullOrWhiteSpace(Model.Description))
+        {
+            <div class="mb-3">
+                <h5 class="fw-semibold mb-1">Mô tả sản phẩm</h5>
+                <p class="text-secondary" style="white-space: pre-line">@Model.Description</p>
+            </div>
+        }
+
+        @* Thông tin người bán *@
+        @if (Model.Seller is not null)
+        {
+            <div class="border rounded-3 p-3 mb-3 d-flex align-items-center gap-3">
+                @if (!string.IsNullOrWhiteSpace(Model.Seller.AvatarUrl))
+                {
+                    <img src="@Model.Seller.AvatarUrl"
+                         class="rounded-circle"
+                         style="width:48px;height:48px;object-fit:cover"
+                         alt="@Model.Seller.Name"
+                         onerror="this.remove()" />
+                }
+                else
+                {
+                    <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white fw-bold"
+                         style="width:48px;height:48px;min-width:48px">
+                        @Model.Seller.Name.FirstOrDefault()
+                    </div>
+                }
+                <div>
+                    <div class="text-muted small">Người bán</div>
+                    <div class="fw-semibold">@Model.Seller.Name</div>
+                </div>
+            </div>
+        }
+
+        @* Thời gian đấu giá *@
+        @if (Model.IsAuction && Model.AuctionEndTime.HasValue)
+        {
+            <div class="alert alert-warning py-2 mb-3">
+                <i class="bi bi-clock"></i>
+                Kết thúc đấu giá: <strong>@Model.AuctionEndTime.Value.ToString("dd/MM/yyyy HH:mm")</strong>
+            </div>
+        }
+
+        @* Nút thêm vào giỏ hàng *@
+        @if (loggedIn)
+        {
+            @* Đã đăng nhập → thêm thẳng vào giỏ server *@
+            <form asp-controller="Cart" asp-action="Add" method="post" class="d-flex gap-2 align-items-center">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="productId" value="@Model.Id" />
+                <input type="hidden" name="title" value="@Model.Title" />
+                <input type="hidden" name="imageUrl" value="@Model.ImageUrl" />
+                <input type="hidden" name="unitPrice" value="@Model.Price" />
+                <input type="hidden" name="returnProductId" value="@Model.Id" />
+
+                <div class="input-group" style="max-width: 130px">
+                    <button type="button" class="btn btn-outline-secondary" id="btnMinus">
+                        <i class="bi bi-dash"></i>
+                    </button>
+                    <input id="qtyInput" name="quantity" value="1" min="1" max="99"
+                           type="number" class="form-control text-center" />
+                    <button type="button" class="btn btn-outline-secondary" id="btnPlus">
+                        <i class="bi bi-plus"></i>
+                    </button>
+                </div>
+
+                <button class="btn btn-primary flex-grow-1 py-2">
+                    <i class="bi bi-cart-plus"></i> Thêm vào giỏ hàng
+                </button>
+            </form>
+        }
+        else
+        {
+            @* Chưa đăng nhập → lưu vào localStorage *@
+            <button id="addLocalCart" class="btn btn-primary w-100 py-2"
+                    data-product-id="@Model.Id"
+                    data-title="@Model.Title"
+                    data-price="@Model.Price"
+                    data-image="@Model.ImageUrl">
+                <i class="bi bi-cart-plus"></i> Thêm vào giỏ hàng
+            </button>
+            <div class="small text-muted mt-2">
+                <i class="bi bi-info-circle"></i>
+                Sản phẩm sẽ lưu trên trình duyệt.
+                <a asp-controller="Auth" asp-action="Login"
+                   asp-route-returnUrl="/Products/@Model.Id">Đăng nhập</a>
+                để đồng bộ giỏ hàng.
+            </div>
+        }
+
+    </div>
+</div>
+
+@* ── Phần đánh giá ── *@
+<section class="mt-5">
+    <h2 class="h4 mb-3">
+        <i class="bi bi-chat-square-text"></i>
+        Đánh giá sản phẩm
+        <span class="badge bg-secondary ms-1">@Model.ReviewCount</span>
+    </h2>
+
+    @if (!Model.Reviews.Any())
+    {
+        <div class="bg-white rounded-3 shadow-sm p-4 text-center text-muted">
+            <i class="bi bi-emoji-smile fs-2 d-block mb-2"></i>
+            Sản phẩm chưa có đánh giá nào.
+        </div>
+    }
+    else
+    {
+        @foreach (var review in Model.Reviews)
+        {
+            <div class="bg-white rounded-3 shadow-sm p-3 mb-2">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center fw-bold"
+                             style="width:36px;height:36px;min-width:36px;font-size:14px">
+                            @review.ReviewerName.FirstOrDefault()
+                        </div>
+                        <div>
+                            <div class="fw-semibold">@review.ReviewerName</div>
+                            @if (review.CreatedAt.HasValue)
+                            {
+                                <div class="text-muted small">@review.CreatedAt.Value.ToString("dd/MM/yyyy")</div>
+                            }
+                        </div>
+                    </div>
+                    <div class="text-warning">
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            <i class="bi @(i <= review.Rating ? "bi-star-fill" : "bi-star")"></i>
+                        }
+                    </div>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(review.Comment))
+                {
+                    <p class="mb-0 mt-2 text-secondary">@review.Comment</p>
+                }
+            </div>
+        }
+    }
+</section>
+
+@section Scripts {
+<script>
+    // Tăng/giảm số lượng
+    const qty = document.getElementById('qtyInput');
+    document.getElementById('btnMinus')?.addEventListener('click', () => {
+        if (qty && +qty.value > 1) qty.value = +qty.value - 1;
+    });
+    document.getElementById('btnPlus')?.addEventListener('click', () => {
+        if (qty && +qty.value < 99) qty.value = +qty.value + 1;
+    });
+
+    // Thêm vào giỏ local (chưa đăng nhập)
+    document.getElementById('addLocalCart')?.addEventListener('click', e => {
+        const b = e.currentTarget;
+        const key = 'cloneEbay.localCart';
+        const cart = JSON.parse(localStorage.getItem(key) || '[]');
+        const id = +b.dataset.productId;
+        const existing = cart.find(x => x.productId === id);
+        if (existing) {
+            existing.quantity = Math.min(existing.quantity + 1, 99);
+        } else {
+            cart.push({
+                productId: id,
+                quantity: 1,
+                title: b.dataset.title,
+                unitPrice: +b.dataset.price,
+                imageUrl: b.dataset.image || null
+            });
+        }
+        localStorage.setItem(key, JSON.stringify(cart));
+
+        // Hiển thị thông báo nhỏ
+        b.innerHTML = '<i class="bi bi-check-circle"></i> Đã thêm vào giỏ!';
+        b.classList.replace('btn-primary', 'btn-success');
+        setTimeout(() => {
+            b.innerHTML = '<i class="bi bi-cart-plus"></i> Thêm vào giỏ hàng';
+            b.classList.replace('btn-success', 'btn-primary');
+        }, 1500);
+    });
+</script>
+}

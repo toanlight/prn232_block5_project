@@ -21,6 +21,8 @@ public partial class CloneEbayDbContext : DbContext
 
     public virtual DbSet<Category> Categories { get; set; }
 
+    public virtual DbSet<CartItem> CartItems { get; set; }
+
     public virtual DbSet<Coupon> Coupons { get; set; }
 
     public virtual DbSet<Dispute> Disputes { get; set; }
@@ -59,6 +61,21 @@ public partial class CloneEbayDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<CartItem>(entity =>
+        {
+            entity.ToTable("CartItem");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.UserId).HasColumnName("userId");
+            entity.Property(e => e.ProductId).HasColumnName("productId");
+            entity.Property(e => e.Quantity).HasColumnName("quantity");
+            entity.Property(e => e.CreatedAt).HasColumnName("createdAt");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updatedAt");
+            entity.HasIndex(e => new { e.UserId, e.ProductId }).IsUnique();
+            entity.HasOne(e => e.User).WithMany(e => e.CartItems).HasForeignKey(e => e.UserId);
+            entity.HasOne(e => e.Product).WithMany(e => e.CartItems).HasForeignKey(e => e.ProductId);
+        });
+
         modelBuilder.Entity<Address>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Address__3213E83F990EEEB2");

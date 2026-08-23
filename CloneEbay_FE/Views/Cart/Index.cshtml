@@ -1,0 +1,278 @@
+@model CloneEbay_FE.Models.CartViewModel
+@{
+    ViewData["Title"] = "Giỏ hàng";
+    var loggedIn = Context.Session.GetString("AccessToken") is not null;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0"><i class="bi bi-cart3"></i> Giỏ hàng của bạn</h1>
+    <a asp-controller="Products" asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Tiếp tục mua sắm
+    </a>
+</div>
+
+@* ── Thông báo đồng bộ giỏ local (khi đã đăng nhập) ── *@
+@if (loggedIn)
+{
+    <form id="sync-token">@Html.AntiForgeryToken()</form>
+    <div id="sync-box" class="alert alert-info alert-dismissible d-none">
+        <i class="bi bi-cloud-arrow-up"></i>
+        Bạn có sản phẩm được lưu trên trình duyệt.
+        <button id="sync-local" class="btn btn-sm btn-primary ms-2">
+            <i class="bi bi-arrow-repeat"></i> Đồng bộ vào tài khoản
+        </button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@* ── Giỏ hàng local (chưa đăng nhập) ── *@
+<div id="local-cart" class="@(loggedIn ? "d-none" : "")"></div>
+
+@* ── Giỏ hàng server (đã đăng nhập) ── *@
+@if (loggedIn)
+{
+    @if (!Model.Items.Any())
+    {
+        <div class="text-center p-5 bg-white rounded-4 shadow-sm">
+            <i class="bi bi-cart-x fs-1 text-muted d-block mb-3"></i>
+            <p class="fw-semibold mb-1">Giỏ hàng đang trống.</p>
+            <p class="text-muted small mb-3">Hãy thêm sản phẩm để tiếp tục.</p>
+            <a asp-controller="Products" asp-action="Index" class="btn btn-primary">
+                <i class="bi bi-bag"></i> Xem sản phẩm
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+
+            @* Danh sách sản phẩm trong giỏ *@
+            <div class="col-lg-8">
+                @foreach (var item in Model.Items)
+                {
+                    <div class="card border-0 shadow-sm mb-3">
+                        <div class="card-body d-flex gap-3 align-items-center">
+
+                            @* Ảnh sản phẩm *@
+                            <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductId"
+                               class="flex-shrink-0">
+                                @if (!string.IsNullOrEmpty(item.ImageUrl))
+                                {
+                                    <img src="@item.ImageUrl"
+                                         class="rounded-2 object-fit-cover"
+                                         style="width:72px;height:72px"
+                                         alt="@item.Title"
+                                         onerror="this.src=''" />
+                                }
+                                else
+                                {
+                                    <div class="rounded-2 bg-light d-flex align-items-center justify-content-center"
+                                         style="width:72px;height:72px">
+                                        <i class="bi bi-image text-muted fs-3"></i>
+                                    </div>
+                                }
+                            </a>
+
+                            @* Thông tin *@
+                            <div class="flex-grow-1 min-width-0">
+                                <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductId"
+                                   class="fw-semibold text-decoration-none text-dark d-block text-truncate">
+                                    @item.Title
+                                </a>
+                                <div class="text-danger fw-semibold mt-1">@item.UnitPrice.ToString("N0") ₫</div>
+                                <div class="text-muted small">
+                                    Thành tiền: <strong>@item.LineTotal.ToString("N0") ₫</strong>
+                                </div>
+                            </div>
+
+                            @* Cập nhật số lượng *@
+                            <form asp-action="Update" method="post" class="d-flex gap-1 align-items-center">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="productId" value="@item.ProductId" />
+                                <div class="input-group" style="width: 120px">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary qty-minus">
+                                        <i class="bi bi-dash"></i>
+                                    </button>
+                                    <input name="quantity" type="number" min="1" max="99"
+                                           value="@item.Quantity"
+                                           class="form-control form-control-sm text-center qty-input" />
+                                    <button type="button" class="btn btn-sm btn-outline-secondary qty-plus">
+                                        <i class="bi bi-plus"></i>
+                                    </button>
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-outline-primary" title="Cập nhật">
+                                    <i class="bi bi-check"></i>
+                                </button>
+                            </form>
+
+                            @* Xóa khỏi giỏ *@
+                            <form asp-action="Remove" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="productId" value="@item.ProductId" />
+                                <button class="btn btn-sm btn-outline-danger" title="Xóa"
+                                        onclick="return confirm('Xóa sản phẩm này khỏi giỏ hàng?')">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </form>
+
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @* Tổng tiền *@
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm position-sticky" style="top: 80px">
+                    <div class="card-body p-4">
+                        <h2 class="h5 mb-3">Tóm tắt đơn hàng</h2>
+
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Số sản phẩm</span>
+                            <span>@Model.ItemCount</span>
+                        </div>
+                        <hr />
+                        <div class="d-flex justify-content-between fw-bold fs-5 mb-4">
+                            <span>Tổng cộng</span>
+                            <span class="text-danger">@Model.Total.ToString("N0") ₫</span>
+                        </div>
+
+                        <div class="d-grid">
+                            <button class="btn btn-primary py-2 fw-semibold" disabled>
+                                <i class="bi bi-bag-check"></i> Tiến hành đặt hàng
+                            </button>
+                            <p class="text-muted small text-center mt-2 mb-0">
+                                (Tính năng đặt hàng do nhóm khác phụ trách)
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    }
+}
+
+@section Scripts {
+<script>
+    // ── Tăng/giảm số lượng trong giỏ ──
+    document.querySelectorAll('.qty-minus').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const input = btn.closest('.input-group').querySelector('.qty-input');
+            if (+input.value > 1) input.value = +input.value - 1;
+        });
+    });
+    document.querySelectorAll('.qty-plus').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const input = btn.closest('.input-group').querySelector('.qty-input');
+            if (+input.value < 99) input.value = +input.value + 1;
+        });
+    });
+
+    // ── Render giỏ hàng local (chưa đăng nhập) ──
+    const LOCAL_KEY = 'cloneEbay.localCart';
+    const cart = JSON.parse(localStorage.getItem(LOCAL_KEY) || '[]');
+
+    function formatMoney(n) {
+        return new Intl.NumberFormat('vi-VN').format(n) + ' ₫';
+    }
+
+    function renderLocal() {
+        const root = document.getElementById('local-cart');
+        if (!root) return;
+
+        if (!cart.length) {
+            root.innerHTML = `
+                <div class="text-center p-5 bg-white rounded-4 shadow-sm">
+                    <i class="bi bi-cart-x fs-1 text-muted d-block mb-3"></i>
+                    <p class="fw-semibold mb-1">Giỏ hàng đang trống.</p>
+                    <a href="/Products" class="btn btn-primary mt-2"><i class="bi bi-bag"></i> Xem sản phẩm</a>
+                </div>`;
+            return;
+        }
+
+        const total = cart.reduce((s, x) => s + x.unitPrice * x.quantity, 0);
+        const rows = cart.map((x, idx) => `
+            <div class="card border-0 shadow-sm mb-3">
+              <div class="card-body d-flex gap-3 align-items-center">
+                <div class="rounded-2 bg-light d-flex align-items-center justify-content-center flex-shrink-0" style="width:72px;height:72px">
+                  ${x.imageUrl ? `<img src="${x.imageUrl}" class="w-100 h-100 object-fit-cover rounded-2" onerror="this.remove()">` : '<i class="bi bi-image text-muted fs-3"></i>'}
+                </div>
+                <div class="flex-grow-1">
+                  <div class="fw-semibold">${x.title}</div>
+                  <div class="text-danger fw-semibold">${formatMoney(x.unitPrice)}</div>
+                  <div class="text-muted small">Thành tiền: <strong>${formatMoney(x.unitPrice * x.quantity)}</strong></div>
+                </div>
+                <div class="input-group" style="width:110px">
+                  <button class="btn btn-sm btn-outline-secondary" onclick="changeLocalQty(${idx}, -1)"><i class="bi bi-dash"></i></button>
+                  <span class="form-control form-control-sm text-center">${x.quantity}</span>
+                  <button class="btn btn-sm btn-outline-secondary" onclick="changeLocalQty(${idx}, +1)"><i class="bi bi-plus"></i></button>
+                </div>
+                <button class="btn btn-sm btn-outline-danger" onclick="removeLocal(${idx})" title="Xóa"><i class="bi bi-trash3"></i></button>
+              </div>
+            </div>`).join('');
+
+        root.innerHTML = `
+            <div class="row g-4">
+              <div class="col-lg-8">${rows}</div>
+              <div class="col-lg-4">
+                <div class="card border-0 shadow-sm">
+                  <div class="card-body p-4">
+                    <h2 class="h5 mb-3">Tóm tắt</h2>
+                    <div class="d-flex justify-content-between fw-bold fs-5 mb-4">
+                      <span>Tổng cộng</span>
+                      <span class="text-danger">${formatMoney(total)}</span>
+                    </div>
+                    <a href="/Auth/Login?returnUrl=/Cart" class="btn btn-primary w-100 py-2">
+                      <i class="bi bi-box-arrow-in-right"></i> Đăng nhập để đặt hàng
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>`;
+    }
+
+    function changeLocalQty(idx, delta) {
+        cart[idx].quantity = Math.min(Math.max(cart[idx].quantity + delta, 1), 99);
+        localStorage.setItem(LOCAL_KEY, JSON.stringify(cart));
+        renderLocal();
+    }
+
+    function removeLocal(idx) {
+        if (!confirm('Xóa sản phẩm này khỏi giỏ hàng?')) return;
+        cart.splice(idx, 1);
+        localStorage.setItem(LOCAL_KEY, JSON.stringify(cart));
+        renderLocal();
+    }
+
+    renderLocal();
+
+    // ── Đồng bộ giỏ local vào server (đã đăng nhập) ──
+    if (cart.length && document.getElementById('sync-box')) {
+        document.getElementById('sync-box').classList.remove('d-none');
+    }
+
+    document.getElementById('sync-local')?.addEventListener('click', async () => {
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+        const payload = cart.map(x => ({ productId: x.productId, quantity: x.quantity }));
+        try {
+            const r = await fetch('/Cart/Sync', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token ?? ''
+                },
+                body: JSON.stringify(payload)
+            });
+            const json = await r.json();
+            if (json.success) {
+                localStorage.removeItem(LOCAL_KEY);
+                location.reload();
+            } else {
+                alert('Đồng bộ thất bại: ' + json.message);
+            }
+        } catch (e) {
+            alert('Lỗi kết nối, vui lòng thử lại.');
+        }
+    });
+</script>
+}

@@ -41,6 +41,8 @@ try
     builder.Services.AddScoped<IJwtService, JwtService>();
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<IUserService, UserService>();
+    builder.Services.AddScoped<IProductService, ProductService>();
+    builder.Services.AddScoped<ICartService, CartService>();
 
     // 4. Cấu hình JWT Authentication
     var jwtSecretKey = builder.Configuration["JwtSettings:SecretKey"] 
