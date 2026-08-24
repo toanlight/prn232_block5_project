@@ -1,6 +1,8 @@
 @model CloneEbay_FE.Models.CreateReviewViewModel
 @{
     ViewData["Title"] = "Viết đánh giá sản phẩm";
+    var productTitle = ViewBag.ProductTitle as string;
+    var productImage = ViewBag.ProductImage as string;
 }
 
 <div class="row justify-content-center">
@@ -15,8 +17,33 @@
                 </a>
             </div>
 
+            @if (!string.IsNullOrEmpty(productTitle))
+            {
+                <div class="d-flex align-items-center gap-3 p-3 bg-light rounded-3 border mb-4">
+                    @if (!string.IsNullOrEmpty(productImage))
+                    {
+                        <img src="@productImage" class="rounded-2 object-fit-cover" style="width: 56px; height: 56px;" alt="@productTitle" onerror="this.src=''" />
+                    }
+                    else
+                    {
+                        <div class="rounded-2 bg-white d-flex align-items-center justify-content-center border" style="width: 56px; height: 56px;">
+                            <i class="bi bi-image text-muted fs-4"></i>
+                        </div>
+                    }
+                    <div>
+                        <span class="text-muted small d-block">Sản phẩm đánh giá:</span>
+                        <strong class="text-dark">@productTitle</strong>
+                    </div>
+                </div>
+            }
+
+            <div class="alert alert-info border-0 rounded-3 mb-4 small">
+                <i class="bi bi-info-circle-fill me-2"></i>
+                Lưu ý: Theo chính sách eBay, bạn chỉ có thể gửi đánh giá sau khi đã mua sản phẩm và đơn hàng đạt trạng thái <strong>Delivered (Đã nhận hàng thành công)</strong>.
+            </div>
+
             <form asp-action="Create" method="post">
-                <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger border-0 rounded-3 small mb-3"></div>
                 <input type="hidden" asp-for="ProductId" />
 
                 <div class="mb-4 text-center p-3 bg-light rounded-3 border">
