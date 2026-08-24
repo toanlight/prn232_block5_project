@@ -1,0 +1,62 @@
+@model CloneEbay_FE.Models.CreateCouponViewModel
+@{
+    ViewData["Title"] = "Tạo mã giảm giá mới";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-7 col-lg-6">
+        <div class="simple-card">
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <h4 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-ticket-perforated text-primary me-2"></i>Tạo Mã Giảm Giá Mới
+                </h4>
+                <a asp-action="Index" class="btn btn-sm btn-outline-secondary rounded-2">
+                    <i class="bi bi-arrow-left me-1"></i> Quay lại
+                </a>
+            </div>
+
+            <form asp-action="Create" method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+                <div class="mb-3">
+                    <label asp-for="Code" class="form-label">Mã Giảm Giá (Code)</label>
+                    <input asp-for="Code" class="form-control text-uppercase font-monospace fw-bold" placeholder="Ví dụ: SUMMER20, EBAY10" />
+                    <span asp-validation-for="Code" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="DiscountPercent" class="form-label">Phần Trăm Giảm Giá (%)</label>
+                    <input asp-for="DiscountPercent" class="form-control" placeholder="10" />
+                    <span asp-validation-for="DiscountPercent" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="ProductId" class="form-label">Mã Sản Phẩm Áp Dụng (Product ID)</label>
+                    <input asp-for="ProductId" class="form-control" placeholder="1" />
+                    <span asp-validation-for="ProductId" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="MaxUsage" class="form-label">Số Lần Sử Dụng Tối Đa</label>
+                    <input asp-for="MaxUsage" class="form-control" placeholder="50" />
+                    <span asp-validation-for="MaxUsage" class="text-danger small"></span>
+                </div>
+
+                <div class="row g-2 mb-4">
+                    <div class="col-6">
+                        <label asp-for="StartDate" class="form-label">Ngày Bắt Đầu</label>
+                        <input asp-for="StartDate" type="datetime-local" class="form-control" />
+                    </div>
+                    <div class="col-6">
+                        <label asp-for="EndDate" class="form-label">Ngày Kết Thúc</label>
+                        <input asp-for="EndDate" type="datetime-local" class="form-control" />
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-main">
+                    <i class="bi bi-save-fill me-1"></i> Lưu mã giảm giá
+                </button>
+            </form>
+        </div>
+    </div>
+</div>

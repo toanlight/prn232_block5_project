@@ -1,0 +1,128 @@
+@model CloneEbay_FE.Models.ApplyCouponViewModel
+@{
+    ViewData["Title"] = "Mã giảm giá (Coupon)";
+    var coupons = ViewBag.Coupons as List<CloneEbay_FE.Models.CouponViewModel> ?? new List<CloneEbay_FE.Models.CouponViewModel>();
+    var result = ViewBag.Result as CloneEbay_FE.Models.ApplyCouponResultViewModel;
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h3 class="fw-bold text-dark mb-1">
+            <i class="bi bi-ticket-perforated-fill text-primary me-2"></i>Mã Giảm Giá & Ưu Đãi
+        </h3>
+        <p class="text-muted small mb-0">Xem các mã giảm giá đang mở và áp dụng ngay trước khi thanh toán.</p>
+    </div>
+    <a asp-action="Create" class="btn btn-outline-primary rounded-3 px-3 py-2 fw-semibold">
+        <i class="bi bi-plus-lg me-1"></i> Tạo mã mới (Seller/Admin)
+    </a>
+</div>
+
+<div class="row g-4">
+    <!-- Cột trái: Form test áp dụng coupon -->
+    <div class="col-md-5 col-lg-4">
+        <div class="simple-card">
+            <h5 class="fw-bold text-dark mb-3">
+                <i class="bi bi-calculator text-primary me-2"></i>Áp dụng thử mã giảm giá
+            </h5>
+
+            <form asp-action="Apply" method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+                <div class="mb-3">
+                    <label asp-for="Code" class="form-label">Mã Giảm Giá (Code)</label>
+                    <input asp-for="Code" class="form-control text-uppercase font-monospace fw-bold" placeholder="Nhập mã (Vd: SUMMER20)" />
+                    <span asp-validation-for="Code" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="ProductId" class="form-label">Mã Sản Phẩm (Product ID)</label>
+                    <input asp-for="ProductId" class="form-control" placeholder="1" />
+                    <span asp-validation-for="ProductId" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="OriginalPrice" class="form-label">Giá Sản Phẩm (VNĐ)</label>
+                    <input asp-for="OriginalPrice" class="form-control" placeholder="100000" />
+                    <span asp-validation-for="OriginalPrice" class="text-danger small"></span>
+                </div>
+
+                <button type="submit" class="btn btn-main">
+                    <i class="bi bi-check-circle-fill me-1"></i> Áp dụng ngay
+                </button>
+            </form>
+
+            @if (result != null)
+            {
+                <div class="mt-4 p-3 bg-success bg-opacity-10 border border-success rounded-3">
+                    <h6 class="fw-bold text-success mb-2">
+                        <i class="bi bi-patch-check-fill me-1"></i>Kết quả áp dụng:
+                    </h6>
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span class="text-muted">Mã áp dụng:</span>
+                        <span class="fw-bold text-uppercase">@result.Code</span>
+                    </div>
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span class="text-muted">Phần trăm giảm:</span>
+                        <span class="fw-bold text-success">-@result.DiscountPercent%</span>
+                    </div>
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span class="text-muted">Số tiền giảm:</span>
+                        <span class="fw-bold text-danger">-@result.DiscountAmount.ToString("N0") VNĐ</span>
+                    </div>
+                    <hr class="my-2" />
+                    <div class="d-flex justify-content-between font-monospace fw-bold fs-6">
+                        <span class="text-dark">Giá còn lại:</span>
+                        <span class="text-primary">@result.FinalPrice.ToString("N0") VNĐ</span>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Cột phải: Danh sách các mã khả dụng -->
+    <div class="col-md-7 col-lg-8">
+        <div class="simple-card">
+            <h5 class="fw-bold text-dark mb-3">
+                <i class="bi bi-tags-fill text-primary me-2"></i>Mã giảm giá đang hoạt động (@coupons.Count)
+            </h5>
+
+            @if (!coupons.Any())
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-ticket-detailed text-muted display-4 mb-3 d-block"></i>
+                    <p class="text-muted mb-0">Hiện tại chưa có mã giảm giá nào đang mở.</p>
+                </div>
+            }
+            else
+            {
+                <div class="row g-3">
+                    @foreach (var c in coupons)
+                    {
+                        <div class="col-12 col-lg-6">
+                            <div class="p-3 bg-light border border-2 border-primary border-opacity-25 rounded-3 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="badge bg-primary fs-6 font-monospace text-uppercase px-2 py-1 mb-1">@c.Code</span>
+                                    <span class="d-block text-danger fw-bold fs-5">Giảm @c.DiscountPercent%</span>
+                                    <span class="text-muted small d-block">Lượt dùng còn lại: <strong>@c.MaxUsage</strong></span>
+                                    @if (c.EndDate.HasValue)
+                                    {
+                                        <span class="text-muted fs-7">Hạn dùng: @c.EndDate.Value.ToString("dd/MM/yyyy")</span>
+                                    }
+                                </div>
+
+                                <div class="text-end">
+                                    <form asp-action="Delete" method="post" class="d-inline">
+                                        <input type="hidden" name="id" value="@c.Id" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger border-0" onclick="return confirm('Bạn có chắc muốn xóa mã này?');">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>

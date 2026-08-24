@@ -1,0 +1,96 @@
+@{
+    ViewData["Title"] = "Lịch sử thông báo hệ thống";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h3 class="fw-bold text-dark mb-1">
+            <i class="bi bi-bell-fill text-primary me-2"></i>Lịch sử thông báo hệ thống
+        </h3>
+        <p class="text-muted small mb-0">Các tin nhắn thông báo về đơn hàng, chương trình khuyến mãi và phản hồi nhận được.</p>
+    </div>
+    <button class="btn btn-sm btn-outline-secondary rounded-2" id="clearNotifHistoryBtn">
+        <i class="bi bi-eraser me-1"></i> Xóa danh sách hiển thị
+    </button>
+</div>
+
+<div class="simple-card p-4">
+    <div id="notificationListContainer" class="d-flex flex-column gap-3">
+        <!-- JS Render list notifications dynamically -->
+        <div class="text-center py-5" id="emptyNotifMsg">
+            <i class="bi bi-bell-slash text-muted display-4 mb-3 d-block"></i>
+            <h6 class="fw-bold text-dark mb-1">Chưa có thông báo mới nào</h6>
+            <p class="text-muted small mb-0">Các thông báo real-time khi có sự kiện sẽ tự động xuất hiện tại đây.</p>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const listContainer = document.getElementById('notificationListContainer');
+            const emptyMsg = document.getElementById('emptyNotifMsg');
+            const clearBtn = document.getElementById('clearNotifHistoryBtn');
+
+            function renderNotifications() {
+                const notifications = JSON.parse(localStorage.getItem('cloneEbay_notifications') || '[]');
+                if (!notifications || notifications.length === 0) {
+                    if (emptyMsg) emptyMsg.style.display = 'block';
+                    return;
+                }
+
+                if (emptyMsg) emptyMsg.style.display = 'none';
+
+                // Render items
+                let html = '';
+                notifications.forEach((item, index) => {
+                    let iconClass = 'bi-bell-fill text-primary';
+                    let badgeBg = 'bg-primary';
+
+                    if (item.type === 'Order') {
+                        iconClass = 'bi-box-seam-fill text-success';
+                        badgeBg = 'bg-success';
+                    } else if (item.type === 'Promotion') {
+                        iconClass = 'bi-ticket-perforated-fill text-warning';
+                        badgeBg = 'bg-warning text-dark';
+                    } else if (item.type === 'Feedback') {
+                        iconClass = 'bi-chat-heart-fill text-danger';
+                        badgeBg = 'bg-danger';
+                    }
+
+                    html += `
+                        <div class="p-3 bg-light rounded-3 border d-flex align-items-start gap-3">
+                            <div class="p-2 bg-white rounded-circle shadow-sm">
+                                <i class="bi ${iconClass} fs-4"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="badge ${badgeBg} px-2 py-1 fs-7">${item.type || 'Thông báo'}</span>
+                                    <span class="text-muted fs-7">${item.time || ''}</span>
+                                </div>
+                                <p class="text-dark fw-semibold mb-0 small">${item.message || ''}</p>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                listContainer.innerHTML = html;
+            }
+
+            renderNotifications();
+
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function () {
+                    localStorage.removeItem('cloneEbay_notifications');
+                    listContainer.innerHTML = `
+                        <div class="text-center py-5">
+                            <i class="bi bi-bell-slash text-muted display-4 mb-3 d-block"></i>
+                            <h6 class="fw-bold text-dark mb-1">Chưa có thông báo mới nào</h6>
+                            <p class="text-muted small mb-0">Các thông báo real-time khi có sự kiện sẽ tự động xuất hiện tại đây.</p>
+                        </div>
+                    `;
+                });
+            }
+        });
+    </script>
+}

@@ -1,0 +1,111 @@
+@model CloneEbay_FE.Models.ProductReviewSummaryViewModel
+@{
+    ViewData["Title"] = "Đánh giá sản phẩm";
+}
+
+<div class="row g-4">
+    <!-- Cột trái: Tóm tắt điểm số & Nút viết đánh giá -->
+    <div class="col-md-4">
+        <div class="simple-card text-center p-4">
+            <h5 class="fw-bold text-dark mb-3">Tổng quan đánh giá</h5>
+
+            <div class="display-3 fw-bold text-primary mb-1">
+                @Model.AverageRating.ToString("F1")
+            </div>
+
+            <!-- Display stars -->
+            <div class="text-warning fs-4 mb-2">
+                @for (int i = 1; i <= 5; i++)
+                {
+                    if (i <= Math.Round(Model.AverageRating))
+                    {
+                        <i class="bi bi-star-fill"></i>
+                    }
+                    else
+                    {
+                        <i class="bi bi-star text-muted opacity-50"></i>
+                    }
+                }
+            </div>
+
+            <p class="text-muted small mb-4">Dựa trên @Model.TotalReviews đánh giá từ khách hàng</p>
+
+            <a asp-action="Create" asp-route-productId="@Model.ProductId" class="btn btn-main">
+                <i class="bi bi-pencil-square me-1"></i> Viết đánh giá của bạn
+            </a>
+
+            <hr class="my-4" />
+
+            <div class="text-start">
+                <a asp-action="MyReviews" class="text-decoration-none small text-primary fw-semibold">
+                    <i class="bi bi-person-lines-fill me-1"></i> Xem các đánh giá của tôi
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cột phải: Danh sách bình luận -->
+    <div class="col-md-8">
+        <div class="simple-card p-4">
+            <h5 class="fw-bold text-dark mb-4">
+                <i class="bi bi-chat-left-text text-primary me-2"></i>Tất cả nhận xét (@Model.TotalReviews)
+            </h5>
+
+            @if (Model.Reviews == null || !Model.Reviews.Any())
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-chat-square-dots text-muted display-4 mb-3 d-block"></i>
+                    <p class="text-muted mb-0">Chưa có đánh giá nào cho sản phẩm này.</p>
+                </div>
+            }
+            else
+            {
+                <div class="d-flex flex-column gap-3">
+                    @foreach (var r in Model.Reviews)
+                    {
+                        <div class="p-3 bg-light rounded-3 border">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 36px; height: 36px; font-size: 14px;">
+                                        @(string.IsNullOrEmpty(r.ReviewerName) ? "U" : r.ReviewerName.Substring(0, 1).ToUpper())
+                                    </div>
+                                    <div>
+                                        <span class="fw-bold text-dark d-block lead fs-6">@r.ReviewerName</span>
+                                        <span class="text-muted fs-7">@r.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+                                    </div>
+                                </div>
+
+                                <div class="text-warning">
+                                    @for (int s = 1; s <= 5; s++)
+                                    {
+                                        if (s <= r.Rating)
+                                        {
+                                            <i class="bi bi-star-fill fs-6"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-star fs-6 text-muted opacity-50"></i>
+                                        }
+                                    }
+                                </div>
+                            </div>
+
+                            <p class="text-dark small mb-0 mt-2">@r.Comment</p>
+
+                            <!-- Nút xóa nếu cần -->
+                            <div class="text-end mt-2">
+                                <form asp-action="Delete" method="post" class="d-inline">
+                                    <input type="hidden" name="id" value="@r.Id" />
+                                    <input type="hidden" name="productId" value="@r.ProductId" />
+                                    <button type="submit" class="btn btn-link text-danger p-0 text-decoration-none fs-7" onclick="return confirm('Bạn có chắc muốn xóa đánh giá này?');">
+                                        <i class="bi bi-trash"></i> Xóa
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
