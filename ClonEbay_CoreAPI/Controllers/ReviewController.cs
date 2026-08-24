@@ -42,7 +42,7 @@ namespace ClonEbay_CoreAPI.Controllers
         // ─── POST /api/reviews ────────────────────────────────────────────────
         /// <summary>Người mua gửi đánh giá sản phẩm mới (yêu cầu đã mua và đơn hàng Delivered).</summary>
         [HttpPost("api/reviews")]
-        [Authorize(Roles = "Buyer")]
+        [Authorize(Roles = "Buyer,BUYER,buyer,Seller,Admin,SELLER,ADMIN")]
         [ProducesResponseType(typeof(ApiResponse<ReviewDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
@@ -54,7 +54,7 @@ namespace ClonEbay_CoreAPI.Controllers
         // ─── PUT /api/reviews/{id} ─────────────────────────────────────────────
         /// <summary>Người mua chỉnh sửa lại đánh giá của chính mình.</summary>
         [HttpPut("api/reviews/{id:int}")]
-        [Authorize(Roles = "Buyer")]
+        [Authorize(Roles = "Buyer,BUYER,buyer,Seller,Admin,SELLER,ADMIN")]
         [ProducesResponseType(typeof(ApiResponse<ReviewDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]

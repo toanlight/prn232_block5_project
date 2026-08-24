@@ -49,11 +49,18 @@ namespace CloneEbay_FE.Controllers
 
         // GET: /Review/Create?productId=1
         [HttpGet]
-        public IActionResult Create(int productId = 1)
+        public async Task<IActionResult> Create(int productId = 1)
         {
             if (string.IsNullOrEmpty(GetAccessToken()))
             {
                 return RedirectToLogin();
+            }
+
+            var productRes = await _apiClient.GetAsync<ProductDetailViewModel>($"products/{productId}");
+            if (productRes?.Success == true && productRes.Data != null)
+            {
+                ViewBag.ProductTitle = productRes.Data.Title;
+                ViewBag.ProductImage = productRes.Data.ImageUrl;
             }
 
             return View(new CreateReviewViewModel { ProductId = productId, Rating = 5 });
