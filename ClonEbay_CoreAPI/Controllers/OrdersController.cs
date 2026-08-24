@@ -27,6 +27,10 @@ public sealed class OrdersController(IOrderService orderService) : ControllerBas
     public async Task<IActionResult> GetOrderDetail(int id) =>
         Ok(await orderService.GetOrderDetailAsync(UserId(), id));
 
+    [HttpPost("{id:int}/confirm-received")]
+    public async Task<IActionResult> ConfirmReceived(int id) =>
+        Ok(await orderService.ConfirmReceivedAsync(UserId(), id));
+
     private int UserId() => int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id)
         ? id
         : throw new UnauthorizedException();

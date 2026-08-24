@@ -36,4 +36,25 @@ public sealed class OrdersController(IApiClientService apiClient) : Controller
 
         return View(response.Data);
     }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> ConfirmReceived(int id)
+    {
+        if (Token() is null)
+        {
+            return RedirectToAction("Login", "Auth");
+        }
+
+        var response = await apiClient.PostAsync<OrderHistoryItemViewModel>($"orders/{id}/confirm-received", null, Token());
+        if (response?.Success == true)
+        {
+            TempData["SuccessMessage"] = "Đã xác nhận đã nhận hàng thành công!";
+        }
+        else
+        {
+            TempData["ErrorMessage"] = response?.Message ?? "Không thể xác nhận nhận hàng.";
+        }
+
+        return RedirectToAction(nameof(Details), new { id });
+    }
 }

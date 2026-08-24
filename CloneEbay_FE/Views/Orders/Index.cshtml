@@ -31,13 +31,14 @@ else
         {
             var badgeClass = order.Status switch
             {
-                "Confirmed" => "bg-success",
-                "Pending" => "bg-warning text-dark",
-                "Processing" => "bg-info text-dark",
-                "Shipped" => "bg-primary",
-                "Delivered" => "bg-success",
-                "Cancelled" => "bg-danger",
-                _ => "bg-secondary"
+                "Confirmed" => "bg-success-subtle text-success border border-success-subtle",
+                "Pending" => "bg-warning-subtle text-warning-emphasis border border-warning-subtle",
+                "Processing" => "bg-info-subtle text-info-emphasis border border-info-subtle",
+                "Shipped" => "bg-primary-subtle text-primary border border-primary-subtle",
+                "Delivered" => "bg-primary text-white",
+                "Received" => "bg-success text-white",
+                "Cancelled" => "bg-danger-subtle text-danger border border-danger-subtle",
+                _ => "bg-secondary text-white"
             };
 
             var statusText = order.Status switch
@@ -47,6 +48,7 @@ else
                 "Processing" => "Đang xử lý",
                 "Shipped" => "Đang giao hàng",
                 "Delivered" => "Đã giao hàng",
+                "Received" => "Đã nhận hàng",
                 "Cancelled" => "Đã hủy",
                 _ => order.Status
             };
@@ -107,12 +109,30 @@ else
                             <span class="d-none d-md-inline ms-2">&bull; Giao tới: @order.AddressText</span>
                         }
                     </div>
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="text-end">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <div class="text-end me-2">
                             <span class="small text-muted">Tổng tiền:</span>
                             <span class="fs-5 fw-bold text-danger ms-1">@order.TotalPrice.ToString("N0") ₫</span>
                         </div>
-                        <a asp-action="Details" asp-route-id="@order.OrderId" class="btn btn-outline-primary btn-sm px-3 rounded-3">
+
+                        @if (order.Status != "Received" && order.Status != "Cancelled")
+                        {
+                            <form asp-action="ConfirmReceived" asp-route-id="@order.OrderId" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-success btn-sm rounded-3">
+                                    <i class="bi bi-check2-circle"></i> Đã nhận hàng
+                                </button>
+                            </form>
+                        }
+
+                        @if (order.Status != "Cancelled")
+                        {
+                            <a asp-controller="ReturnRequest" asp-action="Create" asp-route-orderId="@order.OrderId" class="btn btn-outline-danger btn-sm rounded-3" title="Gửi yêu cầu trả hàng / hoàn tiền cho đơn này">
+                                <i class="bi bi-arrow-return-left"></i> Trả hàng
+                            </a>
+                        }
+
+                        <a asp-action="Details" asp-route-id="@order.OrderId" class="btn btn-primary btn-sm px-3 rounded-3">
                             Chi tiết <i class="bi bi-chevron-right"></i>
                         </a>
                     </div>

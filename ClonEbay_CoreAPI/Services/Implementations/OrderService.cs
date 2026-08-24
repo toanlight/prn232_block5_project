@@ -224,6 +224,23 @@ public sealed class OrderService(CloneEbayDbContext context) : IOrderService
         return ApiResponse<OrderHistoryItemDto>.Ok(ToOrderHistoryDto(order));
     }
 
+    public async Task<ApiResponse<OrderHistoryItemDto>> ConfirmReceivedAsync(int userId, int orderId)
+    {
+        var order = await context.OrderTables
+            .Where(o => o.Id == orderId && o.BuyerId == userId)
+            .Include(o => o.Address)
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Product)
+            .Include(o => o.Payments)
+            .FirstOrDefaultAsync()
+            ?? throw new NotFoundException("Không tìm thấy đơn hàng.");
+
+        order.Status = "Received";
+        await context.SaveChangesAsync();
+
+        return ApiResponse<OrderHistoryItemDto>.Ok(ToOrderHistoryDto(order), "Đã xác nhận nhận hàng thành công.");
+    }
+
     private static OrderHistoryItemDto ToOrderHistoryDto(OrderTable order)
     {
         var payment = order.Payments.OrderByDescending(p => p.Id).FirstOrDefault();
