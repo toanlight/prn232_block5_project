@@ -17,6 +17,18 @@ namespace CloneEbay_FE.Controllers
         [HttpGet]
         public async Task<IActionResult> Index()
         {
+            var userRole = HttpContext.Session.GetString("Role") ?? "";
+            var isBuyer = string.IsNullOrEmpty(userRole) || 
+                          userRole.Equals("BUYER", StringComparison.OrdinalIgnoreCase) || 
+                          userRole.Equals("Buyer", StringComparison.OrdinalIgnoreCase) ||
+                          userRole.Equals("User", StringComparison.OrdinalIgnoreCase);
+
+            if (isBuyer)
+            {
+                TempData["WarningMessage"] = "Vui lòng nhập và áp dụng mã giảm giá trực tiếp cho từng sản phẩm tại Giỏ hàng.";
+                return RedirectToAction("Index", "Cart");
+            }
+
             var response = await _apiClient.GetAsync<List<CouponViewModel>>("coupons");
             var coupons = response?.Success == true ? (response.Data ?? new List<CouponViewModel>()) : new List<CouponViewModel>();
             
@@ -60,14 +72,16 @@ namespace CloneEbay_FE.Controllers
 
         // GET: /Coupon/Create
         [HttpGet]
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
-            if (string.IsNullOrEmpty(GetAccessToken()))
+            var token = GetAccessToken();
+            if (string.IsNullOrEmpty(token))
             {
                 return RedirectToLogin();
             }
 
-            return View(new CreateCouponViewModel { ProductId = 1, DiscountPercent = 10, MaxUsage = 20 });
+            await PopulateProductsViewBag();
+            return View(new CreateCouponViewModel { DiscountPercent = 10, MaxUsage = 20 });
         }
 
         // POST: /Coupon/Create
@@ -83,6 +97,7 @@ namespace CloneEbay_FE.Controllers
 
             if (!ModelState.IsValid)
             {
+                await PopulateProductsViewBag();
                 return View(model);
             }
 
@@ -93,8 +108,23 @@ namespace CloneEbay_FE.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            ModelState.AddModelError(string.Empty, response?.Message ?? "Không thể tạo mã giảm giá.");
+            if (response?.StatusCode == StatusCodes.Status403Forbidden)
+            {
+                ModelState.AddModelError(string.Empty, "Tài khoản của bạn không có quyền tạo mã giảm giá. Chỉ tài khoản Seller hoặc Admin mới có quyền tạo coupon.");
+            }
+            else
+            {
+                ModelState.AddModelError(string.Empty, response?.Message ?? "Không thể tạo mã giảm giá. Vui lòng kiểm tra lại thông tin.");
+            }
+
+            await PopulateProductsViewBag();
             return View(model);
+        }
+
+        private async Task PopulateProductsViewBag()
+        {
+            var res = await _apiClient.GetAsync<PagedProductViewModel>("products?pageSize=100");
+            ViewBag.Products = res?.Data?.Items ?? new List<ProductCardViewModel>();
         }
 
         // POST: /Coupon/Delete/5

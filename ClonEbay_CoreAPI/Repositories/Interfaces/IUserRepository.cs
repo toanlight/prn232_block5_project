@@ -10,6 +10,8 @@ namespace ClonEbay_CoreAPI.Repositories.Interfaces
         Task<bool> ExistsByEmailAsync(string email);
         Task<bool> ExistsByUsernameAsync(string username);
         Task<User?> GetUserWithAddressesAsync(int userId);
+        Task<List<OrderTable>> GetUserOrdersAsync(int userId);
+        Task<List<int>> GetUserReviewedProductIdsAsync(int userId);
         Task SaveChangesAsync();
     }
 }

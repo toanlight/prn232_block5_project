@@ -1,0 +1,30 @@
+namespace CloneEbay_FE.Models
+{
+    public class OrderViewModel
+    {
+        public int Id { get; set; }
+        public DateTime? OrderDate { get; set; }
+        public decimal TotalPrice { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public List<OrderItemViewModel> Items { get; set; } = new();
+        public bool HasPendingReturnRequest { get; set; }
+        public string? ShippingCarrier { get; set; }
+        public string? ShippingStatus { get; set; }
+        public DateTime? EstimatedArrival { get; set; }
+        public string? PaymentMethod { get; set; }
+    }
+
+    public class OrderItemViewModel
+    {
+        public int Id { get; set; }
+        public int ProductId { get; set; }
+        public string ProductTitle { get; set; } = string.Empty;
+        public string? ImageUrl { get; set; }
+        public int Quantity { get; set; }
+        public decimal UnitPrice { get; set; }
+        public decimal LineTotal => UnitPrice * Quantity;
+        public bool HasReviewed { get; set; }
+        public string? SellerName { get; set; }
+        public int? SellerId { get; set; }
+    }
+}

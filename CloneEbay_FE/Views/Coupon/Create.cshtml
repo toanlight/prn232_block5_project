@@ -1,6 +1,9 @@
 @model CloneEbay_FE.Models.CreateCouponViewModel
 @{
     ViewData["Title"] = "Tạo mã giảm giá mới";
+    var userRole = Context.Session.GetString("Role") ?? string.Empty;
+    var isSellerOrAdmin = string.Equals(userRole, "Seller", StringComparison.OrdinalIgnoreCase) || string.Equals(userRole, "Admin", StringComparison.OrdinalIgnoreCase);
+    var products = ViewBag.Products as List<CloneEbay_FE.Models.ProductCardViewModel> ?? new();
 }
 
 <div class="row justify-content-center">
@@ -15,8 +18,16 @@
                 </a>
             </div>
 
+            @if (!isSellerOrAdmin)
+            {
+                <div class="alert alert-warning border-0 rounded-3 mb-4 small">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>Lưu ý vai trò:</strong> Hệ thống yêu cầu tài khoản role <strong>Seller</strong> hoặc <strong>Admin</strong> để tạo mã giảm giá. Vai trò hiện tại của bạn là <strong>@(string.IsNullOrEmpty(userRole) ? "Khách / Buyer" : userRole)</strong>.
+                </div>
+            }
+
             <form asp-action="Create" method="post">
-                <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger border-0 rounded-3 small mb-3"></div>
 
                 <div class="mb-3">
                     <label asp-for="Code" class="form-label">Mã Giảm Giá (Code)</label>
@@ -31,8 +42,23 @@
                 </div>
 
                 <div class="mb-3">
-                    <label asp-for="ProductId" class="form-label">Mã Sản Phẩm Áp Dụng (Product ID)</label>
-                    <input asp-for="ProductId" class="form-control" placeholder="1" />
+                    <label asp-for="ProductId" class="form-label">Sản Phẩm Áp Dụng</label>
+                    @if (products.Any())
+                    {
+                        <select asp-for="ProductId" class="form-select">
+                            <option value="">-- Chọn sản phẩm áp dụng --</option>
+                            @foreach (var p in products)
+                            {
+                                <option value="@p.Id" selected="@(Model.ProductId == p.Id ? "selected" : null)">
+                                    [ID: @p.Id] @p.Title - @p.Price.ToString("N0") ₫
+                                </option>
+                            }
+                        </select>
+                    }
+                    else
+                    {
+                        <input asp-for="ProductId" class="form-control" placeholder="Nhập ID sản phẩm" />
+                    }
                     <span asp-validation-for="ProductId" class="text-danger small"></span>
                 </div>
 
@@ -53,7 +79,7 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-main">
+                <button type="submit" class="btn btn-main" @(isSellerOrAdmin ? "" : "disabled")>
                     <i class="bi bi-save-fill me-1"></i> Lưu mã giảm giá
                 </button>
             </form>

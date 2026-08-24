@@ -11,7 +11,7 @@ namespace ClonEbay_CoreAPI.Services.Implementations;
 
 public sealed class OrderService(CloneEbayDbContext context) : IOrderService
 {
-    public async Task<ApiResponse<CheckoutDto>> GetCheckoutAsync(int userId, int? addressId = null)
+    public async Task<ApiResponse<CheckoutDto>> GetCheckoutAsync(int userId, int? addressId = null, Dictionary<int, string>? appliedCoupons = null)
     {
         var cartItems = await LoadCartAsync(userId, asTracking: false);
         var addresses = await context.Addresses
@@ -30,12 +30,15 @@ public sealed class OrderService(CloneEbayDbContext context) : IOrderService
             throw new NotFoundException("Không tìm thấy địa chỉ giao hàng.");
         }
 
+        var totalDiscount = await CalculateTotalDiscountAsync(cartItems, appliedCoupons);
+
         var checkout = new CheckoutDto
         {
             Items = ToCartDtos(cartItems),
             Addresses = addresses.Select(ToCheckoutAddress).ToList(),
             SelectedAddressId = selectedAddress?.Id,
-            ShippingFee = selectedAddress is null ? 0 : CalculateShippingFee(selectedAddress)
+            ShippingFee = selectedAddress is null ? 0 : CalculateShippingFee(selectedAddress),
+            TotalDiscount = totalDiscount
         };
 
         return ApiResponse<CheckoutDto>.Ok(checkout);
@@ -91,7 +94,8 @@ public sealed class OrderService(CloneEbayDbContext context) : IOrderService
 
         var subtotal = cartItems.Sum(item => (item.Product.Price ?? 0) * item.Quantity);
         var shippingFee = CalculateShippingFee(address);
-        var total = subtotal + shippingFee;
+        var totalDiscount = await CalculateTotalDiscountAsync(cartItems, request.AppliedCoupons);
+        var total = Math.Max(0, subtotal + shippingFee - totalDiscount);
         var now = DateTime.UtcNow;
         var paymentMethod = request.PaymentMethod.Equals("PayPal", StringComparison.OrdinalIgnoreCase)
             ? "PayPal"
@@ -144,6 +148,7 @@ public sealed class OrderService(CloneEbayDbContext context) : IOrderService
             ItemCount = cartItems.Sum(item => item.Quantity),
             Subtotal = subtotal,
             ShippingFee = shippingFee,
+            TotalDiscount = totalDiscount,
             Total = total,
             Status = order.Status,
             PaymentMethod = paymentMethod,
@@ -154,6 +159,120 @@ public sealed class OrderService(CloneEbayDbContext context) : IOrderService
             ? "Đặt hàng COD thành công. Bạn sẽ thanh toán khi nhận hàng."
             : "Đơn hàng đã được khởi tạo. Vui lòng hoàn tất thanh toán PayPal mô phỏng.";
         return ApiResponse<OrderCreatedDto>.Ok(result, message);
+    }
+
+    private async Task<decimal> CalculateTotalDiscountAsync(List<CartItem> cartItems, Dictionary<int, string>? appliedCoupons)
+    {
+        if (appliedCoupons == null || appliedCoupons.Count == 0) return 0m;
+
+        decimal totalDiscount = 0m;
+        var now = DateTime.UtcNow;
+
+        foreach (var item in cartItems)
+        {
+            if (appliedCoupons.TryGetValue(item.ProductId, out var code) && !string.IsNullOrWhiteSpace(code))
+            {
+                var coupon = await context.Coupons
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.Code == code.Trim().ToUpper() && c.ProductId == item.ProductId);
+
+                if (coupon != null && 
+                    (!coupon.StartDate.HasValue || coupon.StartDate.Value <= now) &&
+                    (!coupon.EndDate.HasValue || coupon.EndDate.Value >= now) &&
+                    (coupon.MaxUsage == null || coupon.MaxUsage > 0))
+                {
+                    var lineTotal = (item.Product.Price ?? 0) * item.Quantity;
+                    var discount = lineTotal * ((coupon.DiscountPercent ?? 0m) / 100m);
+                    totalDiscount += discount;
+                }
+            }
+        }
+
+        return Math.Round(totalDiscount, 2);
+    }
+
+    public async Task<ApiResponse<List<OrderDto>>> GetUserOrdersAsync(int userId)
+    {
+        var orders = await context.OrderTables
+            .AsNoTracking()
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Product)
+                    .ThenInclude(p => p!.Seller)
+            .Include(o => o.ReturnRequests)
+            .Include(o => o.ShippingInfos)
+            .Include(o => o.Payments)
+            .Where(o => o.BuyerId == userId)
+            .OrderByDescending(o => o.OrderDate ?? DateTime.MinValue)
+            .ToListAsync();
+
+        var userReviews = await context.Reviews
+            .AsNoTracking()
+            .Where(r => r.ReviewerId == userId && r.ProductId.HasValue)
+            .Select(r => r.ProductId!.Value)
+            .ToListAsync();
+
+        var result = orders.Select(o =>
+        {
+            var shipping = o.ShippingInfos.FirstOrDefault();
+            var payment = o.Payments.FirstOrDefault();
+
+            return new OrderDto
+            {
+                Id = o.Id,
+                OrderDate = o.OrderDate,
+                TotalPrice = o.TotalPrice ?? 0,
+                Status = o.Status ?? "Pending",
+                HasPendingReturnRequest = o.ReturnRequests.Any(r => r.Status == "Pending"),
+                ShippingCarrier = shipping?.Carrier ?? "Standard",
+                ShippingStatus = shipping?.Status ?? "Preparing",
+                EstimatedArrival = shipping?.EstimatedArrival ?? o.OrderDate?.AddDays(3),
+                PaymentMethod = payment?.Method ?? "COD",
+                Items = o.OrderItems.Select(oi => new OrderItemDto
+                {
+                    Id = oi.Id,
+                    ProductId = oi.ProductId ?? 0,
+                    ProductTitle = oi.Product?.Title ?? "Sản phẩm",
+                    ImageUrl = ProductService.FirstImage(oi.Product?.Images),
+                    Quantity = oi.Quantity ?? 1,
+                    UnitPrice = oi.UnitPrice ?? 0,
+                    HasReviewed = userReviews.Contains(oi.ProductId ?? 0),
+                    SellerId = oi.Product?.SellerId,
+                    SellerName = oi.Product?.Seller?.FullName ?? oi.Product?.Seller?.Username ?? "eBay Official Store"
+                }).ToList()
+            };
+        }).ToList();
+
+        return ApiResponse<List<OrderDto>>.Ok(result);
+    }
+
+    public async Task<ApiResponse<OrderDto>> ConfirmReceiptAsync(int userId, int orderId)
+    {
+        var order = await context.OrderTables
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Product)
+            .Include(o => o.ShippingInfos)
+            .SingleOrDefaultAsync(o => o.Id == orderId && o.BuyerId == userId)
+            ?? throw new NotFoundException("Không tìm thấy đơn hàng.");
+
+        if (string.Equals(order.Status, nameof(Models.Enums.OrderStatus.Cancelled), StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(order.Status, nameof(Models.Enums.OrderStatus.Returned), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new BadRequestException("Không thể xác nhận đơn hàng đã bị hủy hoặc hoàn trả.");
+        }
+
+        order.Status = nameof(Models.Enums.OrderStatus.Delivered);
+
+        foreach (var shipping in order.ShippingInfos)
+        {
+            shipping.Status = nameof(Models.Enums.OrderStatus.Delivered);
+        }
+
+        await context.SaveChangesAsync();
+
+        var ordersRes = await GetUserOrdersAsync(userId);
+        var updatedDto = ordersRes.Data?.FirstOrDefault(o => o.Id == orderId);
+
+        return ApiResponse<OrderDto>.Ok(updatedDto!, "Xác nhận đã nhận hàng thành công. Bạn có thể viết đánh giá hoặc gửi yêu cầu hoàn trả.");
     }
 
     private async Task<List<CartItem>> LoadCartAsync(int userId, bool asTracking)

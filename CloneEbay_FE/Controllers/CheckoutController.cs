@@ -13,7 +13,12 @@ public sealed class CheckoutController(IApiClientService apiClient) : Controller
         var token = Token();
         if (token is null) return RedirectToLogin();
 
-        var endpoint = addressId.HasValue ? $"orders/checkout?addressId={addressId.Value}" : "orders/checkout";
+        var appliedCoupons = GetAppliedCouponsFromSession();
+        var couponsJson = System.Text.Json.JsonSerializer.Serialize(appliedCoupons);
+        var endpoint = addressId.HasValue
+            ? $"orders/checkout?addressId={addressId.Value}&coupons={Uri.EscapeDataString(couponsJson)}"
+            : $"orders/checkout?coupons={Uri.EscapeDataString(couponsJson)}";
+
         var response = await apiClient.GetAsync<CheckoutViewModel>(endpoint, token);
         if (response?.Success != true || response.Data is null)
         {
@@ -45,12 +50,17 @@ public sealed class CheckoutController(IApiClientService apiClient) : Controller
             return RedirectToAction(nameof(Index), new { addressId = model.AddressId > 0 ? (int?)model.AddressId : null });
         }
 
+        model.AppliedCoupons = GetAppliedCouponsFromSession();
+
         var response = await apiClient.PostAsync<OrderCreatedViewModel>("orders/checkout", model, token);
         if (response?.Success != true || response.Data is null)
         {
             TempData["ErrorMessage"] = response?.Message ?? "Không thể tạo đơn hàng.";
             return RedirectToAction(nameof(Index), new { addressId = model.AddressId });
         }
+
+        // Xoá Session Coupon sau khi tạo đơn thành công
+        HttpContext.Session.Remove("AppliedCoupons");
 
         TempData["OrderId"] = response.Data.OrderId;
         TempData["OrderTotal"] = response.Data.Total.ToString(CultureInfo.InvariantCulture);
@@ -65,6 +75,43 @@ public sealed class CheckoutController(IApiClientService apiClient) : Controller
 
         TempData["SuccessMessage"] = response.Message;
         return RedirectToAction(nameof(Success));
+    }
+
+    private Dictionary<int, string> GetAppliedCouponsFromSession()
+    {
+        var result = new Dictionary<int, string>();
+
+        var sessionData = HttpContext.Session.GetString("AppliedCoupons");
+        if (!string.IsNullOrEmpty(sessionData))
+        {
+            try
+            {
+                var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<int, string>>(sessionData);
+                if (dict != null)
+                {
+                    foreach (var kvp in dict) result[kvp.Key] = kvp.Value;
+                }
+            }
+            catch { }
+        }
+
+        foreach (var key in HttpContext.Session.Keys)
+        {
+            if (key.StartsWith("AppliedCouponCode_"))
+            {
+                var productIdStr = key.Replace("AppliedCouponCode_", "");
+                if (int.TryParse(productIdStr, out var pid))
+                {
+                    var code = HttpContext.Session.GetString(key);
+                    if (!string.IsNullOrWhiteSpace(code))
+                    {
+                        result[pid] = code;
+                    }
+                }
+            }
+        }
+
+        return result;
     }
 
     [HttpGet]

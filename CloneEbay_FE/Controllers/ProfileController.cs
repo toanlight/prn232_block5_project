@@ -148,5 +148,53 @@ namespace CloneEbay_FE.Controllers
 
             return RedirectToAction("Index");
         }
+
+        // GET: /Profile/Orders
+        [HttpGet]
+        public async Task<IActionResult> Orders()
+        {
+            var token = GetAccessToken();
+            if (string.IsNullOrEmpty(token))
+            {
+                TempData["WarningMessage"] = "Vui lòng đăng nhập để xem lịch sử đơn hàng.";
+                return RedirectToAction("Login", "Auth", new { returnUrl = "/Profile/Orders" });
+            }
+
+            var response = await _apiClient.GetAsync<List<OrderViewModel>>("orders/my-orders", token);
+            if (response?.Success == true)
+            {
+                return View(response.Data ?? new List<OrderViewModel>());
+            }
+
+            if (!string.IsNullOrWhiteSpace(response?.Message))
+            {
+                TempData["ErrorMessage"] = response.Message;
+            }
+            return View(new List<OrderViewModel>());
+        }
+
+        // POST: /Profile/ConfirmReceipt
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmReceipt(int orderId)
+        {
+            var token = GetAccessToken();
+            if (string.IsNullOrEmpty(token))
+            {
+                return RedirectToAction("Login", "Auth", new { returnUrl = "/Profile/Orders" });
+            }
+
+            var response = await _apiClient.PostAsync<OrderViewModel>($"orders/{orderId}/confirm-receipt", new { }, token);
+            if (response?.Success == true)
+            {
+                TempData["SuccessMessage"] = response.Message ?? "Đã xác nhận nhận hàng thành công!";
+            }
+            else
+            {
+                TempData["ErrorMessage"] = response?.Message ?? "Xác nhận nhận hàng thất bại.";
+            }
+
+            return RedirectToAction(nameof(Orders));
+        }
     }
 }
