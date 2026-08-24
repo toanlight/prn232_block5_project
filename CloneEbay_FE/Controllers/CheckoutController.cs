@@ -55,6 +55,14 @@ public sealed class CheckoutController(IApiClientService apiClient) : Controller
         TempData["OrderId"] = response.Data.OrderId;
         TempData["OrderTotal"] = response.Data.Total.ToString(CultureInfo.InvariantCulture);
         TempData["PaymentMethod"] = response.Data.PaymentMethod;
+        TempData["PaymentStatus"] = response.Data.PaymentStatus;
+        TempData["OrderStatus"] = response.Data.Status;
+
+        if (response.Data.PaymentMethod.Equals("PayPal", StringComparison.OrdinalIgnoreCase))
+        {
+            return RedirectToAction("PayPal", "Payment", new { orderId = response.Data.OrderId });
+        }
+
         TempData["SuccessMessage"] = response.Message;
         return RedirectToAction(nameof(Success));
     }
@@ -78,7 +86,9 @@ public sealed class CheckoutController(IApiClientService apiClient) : Controller
         {
             OrderId = orderId,
             Total = total,
-            PaymentMethod = TempData["PaymentMethod"]?.ToString() ?? "COD"
+            PaymentMethod = TempData["PaymentMethod"]?.ToString() ?? "COD",
+            PaymentStatus = TempData["PaymentStatus"]?.ToString() ?? "Pending",
+            Status = TempData["OrderStatus"]?.ToString() ?? "Confirmed"
         });
     }
 

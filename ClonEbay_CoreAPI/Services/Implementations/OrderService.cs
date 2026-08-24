@@ -96,6 +96,7 @@ public sealed class OrderService(CloneEbayDbContext context) : IOrderService
         var paymentMethod = request.PaymentMethod.Equals("PayPal", StringComparison.OrdinalIgnoreCase)
             ? "PayPal"
             : "COD";
+        var orderStatus = paymentMethod == "COD" ? "Confirmed" : "Pending";
 
         var order = new OrderTable
         {
@@ -103,7 +104,7 @@ public sealed class OrderService(CloneEbayDbContext context) : IOrderService
             AddressId = address.Id,
             OrderDate = now,
             TotalPrice = total,
-            Status = "Pending",
+            Status = orderStatus,
             OrderItems = cartItems.Select(item => new OrderItem
             {
                 ProductId = item.ProductId,
@@ -149,7 +150,10 @@ public sealed class OrderService(CloneEbayDbContext context) : IOrderService
             PaymentStatus = "Pending"
         };
 
-        return ApiResponse<OrderCreatedDto>.Ok(result, "Đặt hàng thành công. Giỏ hàng đã được làm trống và tồn kho đã cập nhật.");
+        var message = paymentMethod == "COD"
+            ? "Đặt hàng COD thành công. Bạn sẽ thanh toán khi nhận hàng."
+            : "Đơn hàng đã được khởi tạo. Vui lòng hoàn tất thanh toán PayPal mô phỏng.";
+        return ApiResponse<OrderCreatedDto>.Ok(result, message);
     }
 
     private async Task<List<CartItem>> LoadCartAsync(int userId, bool asTracking)
