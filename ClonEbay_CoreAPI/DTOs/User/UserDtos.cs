@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using ClonEbay_CoreAPI.DTOs.Address;
 
 namespace ClonEbay_CoreAPI.DTOs.User
 {
@@ -14,16 +15,6 @@ namespace ClonEbay_CoreAPI.DTOs.User
         public bool IsEmailVerified { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<AddressDto> Addresses { get; set; } = new();
-    }
-
-    public class AddressDto
-    {
-        public int Id { get; set; }
-        public string? Street { get; set; }
-        public string? City { get; set; }
-        public string? State { get; set; }
-        public string? Country { get; set; }
-        public string? PostalCode { get; set; }
     }
 
     public class UpdateProfileRequestDto

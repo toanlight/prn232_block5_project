@@ -35,12 +35,14 @@ try
     // 2. Đăng ký Repositories (Data Access Layer)
     builder.Services.AddScoped(typeof(ClonEbay_CoreAPI.Repositories.Interfaces.IGenericRepository<>), typeof(ClonEbay_CoreAPI.Repositories.Implementations.GenericRepository<>));
     builder.Services.AddScoped<ClonEbay_CoreAPI.Repositories.Interfaces.IUserRepository, ClonEbay_CoreAPI.Repositories.Implementations.UserRepository>();
+    builder.Services.AddScoped<ClonEbay_CoreAPI.Repositories.Interfaces.IAddressRepository, ClonEbay_CoreAPI.Repositories.Implementations.AddressRepository>();
 
     // 3. Đăng ký Services (Business Logic Layer)
     builder.Services.AddScoped<IEmailService, EmailService>();
     builder.Services.AddScoped<IJwtService, JwtService>();
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<IUserService, UserService>();
+    builder.Services.AddScoped<IAddressService, AddressService>();
 
     // 4. Cấu hình JWT Authentication
     var jwtSecretKey = builder.Configuration["JwtSettings:SecretKey"] 

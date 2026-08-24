@@ -10,6 +10,7 @@ namespace CloneEbay_FE.Services
         Task<ApiResponseModel<T>?> GetAsync<T>(string endpoint, string? bearerToken = null);
         Task<ApiResponseModel<T>?> PostAsync<T>(string endpoint, object? data, string? bearerToken = null);
         Task<ApiResponseModel<T>?> PutAsync<T>(string endpoint, object? data, string? bearerToken = null);
+        Task<ApiResponseModel<T>?> DeleteAsync<T>(string endpoint, string? bearerToken = null);
     }
 
     public class ApiClientService : IApiClientService
@@ -95,6 +96,32 @@ namespace CloneEbay_FE.Services
                 var json = JsonSerializer.Serialize(data);
                 request.Content = new StringContent(json, Encoding.UTF8, "application/json");
             }
+            if (!string.IsNullOrEmpty(bearerToken))
+            {
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
+            }
+
+            var response = await _httpClient.SendAsync(request);
+            var content = await response.Content.ReadAsStringAsync();
+
+            try
+            {
+                return JsonSerializer.Deserialize<ApiResponseModel<T>>(content, _jsonOptions);
+            }
+            catch
+            {
+                return new ApiResponseModel<T>
+                {
+                    Success = response.IsSuccessStatusCode,
+                    StatusCode = (int)response.StatusCode,
+                    Message = content
+                };
+            }
+        }
+
+        public async Task<ApiResponseModel<T>?> DeleteAsync<T>(string endpoint, string? bearerToken = null)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Delete, endpoint);
             if (!string.IsNullOrEmpty(bearerToken))
             {
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
