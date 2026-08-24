@@ -1,4 +1,5 @@
 using ClonEbay_CoreAPI.Common.Models;
+using ClonEbay_CoreAPI.DTOs.Notification;
 using ClonEbay_CoreAPI.DTOs.Review;
 using ClonEbay_CoreAPI.Exceptions;
 using ClonEbay_CoreAPI.Models;
@@ -11,13 +12,16 @@ namespace ClonEbay_CoreAPI.Services.Implementations
     {
         private readonly IReviewRepository _reviewRepo;
         private readonly IGenericRepository<Product> _productRepo;
+        private readonly INotificationService _notificationService;
 
         public ReviewService(
             IReviewRepository reviewRepo,
-            IGenericRepository<Product> productRepo)
+            IGenericRepository<Product> productRepo,
+            INotificationService notificationService)
         {
             _reviewRepo = reviewRepo;
             _productRepo = productRepo;
+            _notificationService = notificationService;
         }
 
         // ─── GET: Danh sách review của 1 sản phẩm ────────────────────────────────
@@ -82,7 +86,23 @@ namespace ClonEbay_CoreAPI.Services.Implementations
 
             // Refetch để lấy đầy đủ navigation properties (Product, Reviewer) cho DTO
             var createdReview = await _reviewRepo.GetByIdAsync(review.Id);
-            return ApiResponse<ReviewDto>.Ok(ToDto(createdReview ?? review), "Gửi đánh giá sản phẩm thành công.");
+            var resultDto = ToDto(createdReview ?? review);
+
+            // Gửi thông báo Real-time qua SignalR cho Seller sở hữu sản phẩm
+            var sellerId = product.SellerId ?? 0;
+            _ = Task.Run(() => _notificationService.SendFeedbackNotificationAsync(new FeedbackNotificationDto
+            {
+                ReviewId = review.Id,
+                ProductId = dto.ProductId,
+                ProductTitle = product.Title ?? string.Empty,
+                SellerId = sellerId,
+                ReviewerName = resultDto.ReviewerName,
+                Rating = dto.Rating,
+                Comment = dto.Comment ?? string.Empty,
+                Message = $"Sản phẩm '{product.Title}' của bạn vừa nhận được đánh giá {dto.Rating} sao từ {resultDto.ReviewerName}."
+            }));
+
+            return ApiResponse<ReviewDto>.Ok(resultDto, "Gửi đánh giá sản phẩm thành công.");
         }
 
         // ─── PUT: Cập nhật đánh giá ──────────────────────────────────────────────

@@ -1,5 +1,6 @@
 using ClonEbay_CoreAPI.Common.Models;
 using ClonEbay_CoreAPI.DTOs.Coupon;
+using ClonEbay_CoreAPI.DTOs.Notification;
 using ClonEbay_CoreAPI.Exceptions;
 using ClonEbay_CoreAPI.Models;
 using ClonEbay_CoreAPI.Repositories.Interfaces;
@@ -11,13 +12,16 @@ namespace ClonEbay_CoreAPI.Services.Implementations
     {
         private readonly ICouponRepository _couponRepo;
         private readonly IGenericRepository<Product> _productRepo;
+        private readonly INotificationService _notificationService;
 
         public CouponService(
             ICouponRepository couponRepo,
-            IGenericRepository<Product> productRepo)
+            IGenericRepository<Product> productRepo,
+            INotificationService notificationService)
         {
             _couponRepo = couponRepo;
             _productRepo = productRepo;
+            _notificationService = notificationService;
         }
 
         // ─── GET: Danh sách coupon khả dụng ────────────────────────────────────
@@ -118,6 +122,18 @@ namespace ClonEbay_CoreAPI.Services.Implementations
             await _couponRepo.SaveChangesAsync();
 
             var createdCoupon = await _couponRepo.GetByIdAsync(coupon.Id);
+
+            // Gửi thông báo Real-time qua SignalR cho các Buyer
+            _ = Task.Run(() => _notificationService.SendPromotionNotificationAsync(new PromotionNotificationDto
+            {
+                CouponId = coupon.Id,
+                Code = coupon.Code ?? string.Empty,
+                DiscountPercent = dto.DiscountPercent,
+                ProductId = dto.ProductId,
+                ProductTitle = product.Title ?? string.Empty,
+                Message = $"Mã giảm giá '{coupon.Code}' vừa ra mắt! Giảm {dto.DiscountPercent}% cho sản phẩm {product.Title}."
+            }));
+
             return ApiResponse<CouponDto>.Ok(ToDto(createdCoupon ?? coupon), "Tạo mã giảm giá mới thành công.");
         }
 
