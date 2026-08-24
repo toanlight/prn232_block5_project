@@ -9,7 +9,4 @@ public interface IOrderService
     Task<ApiResponse<OrderCreatedDto>> PlaceOrderAsync(int userId, PlaceOrderRequestDto request);
     Task<ApiResponse<List<OrderDto>>> GetUserOrdersAsync(int userId);
     Task<ApiResponse<OrderDto>> ConfirmReceiptAsync(int userId, int orderId);
-    Task<ApiResponse<List<OrderHistoryItemDto>>> GetMyOrdersAsync(int userId);
-    Task<ApiResponse<OrderHistoryItemDto>> GetOrderDetailAsync(int userId, int orderId);
-    Task<ApiResponse<OrderHistoryItemDto>> ConfirmReceivedAsync(int userId, int orderId);
 }
