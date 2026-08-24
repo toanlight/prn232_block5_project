@@ -81,7 +81,7 @@ namespace ClonEbay_CoreAPI.Services.Implementations
                 Password = hashedPassword,
                 FullName = request.FullName?.Trim() ?? request.Username.Trim(),
                 Phone = request.Phone?.Trim(),
-                Role = "User",
+                Role = "Buyer",
                 IsEmailVerified = false,
                 VerificationCode = otpCode,
                 VerificationExpiry = otpExpiry,

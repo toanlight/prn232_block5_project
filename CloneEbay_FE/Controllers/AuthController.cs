@@ -125,8 +125,8 @@ namespace CloneEbay_FE.Controllers
                 HttpContext.Session.SetString("RefreshToken", response.Data.RefreshToken);
                 HttpContext.Session.SetString("Username", response.Data.User.Username);
                 HttpContext.Session.SetString("FullName", response.Data.User.FullName ?? response.Data.User.Username);
-                HttpContext.Session.SetString("Role", response.Data.User.Role ?? "User");
-                HttpContext.Session.SetString("UserRole", response.Data.User.Role ?? "User");
+                HttpContext.Session.SetString("Role", response.Data.User.Role ?? "Buyer");
+                HttpContext.Session.SetString("UserRole", response.Data.User.Role ?? "Buyer");
                 HttpContext.Session.SetInt32("UserId", response.Data.User.Id);
                 HttpContext.Session.SetString("AvatarUrl", response.Data.User.AvatarUrl ?? "");
 
