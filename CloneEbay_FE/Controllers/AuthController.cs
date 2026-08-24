@@ -127,6 +127,7 @@ namespace CloneEbay_FE.Controllers
                 HttpContext.Session.SetString("FullName", response.Data.User.FullName ?? response.Data.User.Username);
                 HttpContext.Session.SetString("Role", response.Data.User.Role ?? "User");
                 HttpContext.Session.SetInt32("UserId", response.Data.User.Id);
+                HttpContext.Session.SetString("AvatarUrl", response.Data.User.AvatarUrl ?? "");
 
                 // Lưu cookie nếu RememberMe
                 if (model.RememberMe)

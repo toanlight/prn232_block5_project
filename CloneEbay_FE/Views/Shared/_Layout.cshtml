@@ -4,6 +4,7 @@
 @{
     var username = HttpContextAccessor.HttpContext?.Session.GetString("Username");
     var fullName = HttpContextAccessor.HttpContext?.Session.GetString("FullName") ?? username;
+    var avatarUrl = HttpContextAccessor.HttpContext?.Session.GetString("AvatarUrl");
     var accessToken = HttpContextAccessor.HttpContext?.Session.GetString("AccessToken") ?? HttpContextAccessor.HttpContext?.Request.Cookies["AccessToken"];
     var isLoggedIn = !string.IsNullOrEmpty(username);
 }
@@ -192,7 +193,14 @@
                         <span>Địa chỉ</span>
                     </a>
                     <a asp-controller="Profile" asp-action="Index" class="nav-link-custom d-flex align-items-center gap-2">
-                        <i class="bi bi-person-circle fs-5 text-primary"></i>
+                        @if (!string.IsNullOrEmpty(avatarUrl))
+                        {
+                            <img src="@avatarUrl" alt="Avatar" class="rounded-circle border" style="width: 28px; height: 28px; object-fit: cover;" />
+                        }
+                        else
+                        {
+                            <i class="bi bi-person-circle fs-5 text-primary"></i>
+                        }
                         <span>@fullName</span>
                     </a>
                     <a asp-controller="Auth" asp-action="Logout" class="btn btn-sm btn-outline-danger rounded-3 ms-2 px-3 py-1">

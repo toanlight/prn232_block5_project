@@ -8,9 +8,16 @@
         <div class="simple-card">
             <!-- User summary header -->
             <div class="d-flex align-items-center gap-3 pb-3 mb-4 border-bottom">
-                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold fs-4" style="width: 54px; height: 54px; flex-shrink: 0;">
-                    @(string.IsNullOrEmpty(Model.FullName) ? Model.Username.Substring(0, 1).ToUpper() : Model.FullName.Substring(0, 1).ToUpper())
-                </div>
+                @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+                {
+                    <img id="headerAvatar" src="@Model.AvatarUrl" alt="Avatar" class="rounded-circle border shadow-sm" style="width: 58px; height: 58px; object-fit: cover; flex-shrink: 0;" />
+                }
+                else
+                {
+                    <div id="headerAvatarFallback" class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold fs-4 shadow-sm" style="width: 58px; height: 58px; flex-shrink: 0;">
+                        @(string.IsNullOrEmpty(Model.FullName) ? Model.Username.Substring(0, 1).ToUpper() : Model.FullName.Substring(0, 1).ToUpper())
+                    </div>
+                }
                 <div>
                     <h4 class="fw-bold mb-0">@(string.IsNullOrEmpty(Model.FullName) ? Model.Username : Model.FullName)</h4>
                     <span class="text-muted small">@@@Model.Username &bull; @Model.Email</span>
@@ -53,31 +60,49 @@
             <div class="tab-content" id="profileTabsContent">
                 <!-- Tab 1: Update Profile -->
                 <div class="tab-pane fade show active" id="edit-pane" role="tabpanel">
-                    <form asp-action="Update" method="post">
+                    <form asp-action="Update" method="post" enctype="multipart/form-data">
                         @Html.AntiForgeryToken()
                         <input type="hidden" asp-for="Id" />
                         <input type="hidden" asp-for="Username" />
                         <input type="hidden" asp-for="Email" />
+                        <input type="hidden" asp-for="AvatarUrl" id="currentAvatarUrl" />
 
-                        <div class="mb-3">
-                            <label asp-for="FullName" class="form-label"></label>
-                            <input asp-for="FullName" class="form-control" />
-                            <span asp-validation-for="FullName" class="text-danger small"></span>
+                        <!-- Avatar Upload Box with Live Preview -->
+                        <div class="mb-4 p-3 bg-light rounded-3 border">
+                            <label class="form-label fw-bold d-block mb-2">Ảnh đại diện</label>
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="position-relative">
+                                    <img id="avatarPreviewImg" 
+                                         src="@(!string.IsNullOrEmpty(Model.AvatarUrl) ? Model.AvatarUrl : "https://ui-avatars.com/api/?name=" + Uri.EscapeDataString(Model.FullName ?? Model.Username) + "&background=2563eb&color=fff&size=128")" 
+                                         alt="Avatar Preview" 
+                                         class="rounded-circle border shadow-sm" 
+                                         style="width: 80px; height: 80px; object-fit: cover;" />
+                                </div>
+                                <div class="flex-grow-1">
+                                    <label for="AvatarFile" class="btn btn-sm btn-outline-primary mb-1">
+                                        <i class="bi bi-upload me-1"></i> Chọn ảnh từ máy tính
+                                    </label>
+                                    <input asp-for="AvatarFile" type="file" class="d-none" id="AvatarFile" accept="image/png, image/jpeg, image/jpg, image/webp, image/gif" />
+                                    <div class="text-muted small" id="selectedFileName">Hỗ trợ JPG, PNG, WEBP hoặc GIF (tối đa 5MB)</div>
+                                </div>
+                            </div>
+                            <span asp-validation-for="AvatarFile" class="text-danger small"></span>
                         </div>
 
                         <div class="mb-3">
+                            <label asp-for="FullName" class="form-label"></label>
+                            <input asp-for="FullName" class="form-control" placeholder="Nhập họ và tên của bạn" />
+                            <span asp-validation-for="FullName" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-4">
                             <label asp-for="Phone" class="form-label"></label>
                             <input asp-for="Phone" class="form-control" placeholder="0912345678" />
                             <span asp-validation-for="Phone" class="text-danger small"></span>
                         </div>
 
-                        <div class="mb-4">
-                            <label asp-for="AvatarUrl" class="form-label">Link ảnh đại diện (URL)</label>
-                            <input asp-for="AvatarUrl" class="form-control" placeholder="https://..." />
-                        </div>
-
                         <button type="submit" class="btn-main" style="max-width: 200px;">
-                            Lưu thông tin
+                            <i class="bi bi-check2-circle me-1"></i> Lưu thông tin
                         </button>
                     </form>
                 </div>
@@ -103,7 +128,7 @@
                         </div>
 
                         <button type="submit" class="btn-main" style="max-width: 200px;">
-                            Cập nhật mật khẩu
+                            <i class="bi bi-key me-1"></i> Cập nhật mật khẩu
                         </button>
                     </form>
                 </div>
@@ -114,4 +139,18 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Live image preview khi chọn file từ máy tính
+        document.getElementById('AvatarFile')?.addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('selectedFileName').innerText = "Đã chọn: " + file.name;
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    document.getElementById('avatarPreviewImg').src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    </script>
 }

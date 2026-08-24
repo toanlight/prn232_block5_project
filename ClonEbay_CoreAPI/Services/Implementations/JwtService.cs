@@ -19,9 +19,9 @@ namespace ClonEbay_CoreAPI.Services.Implementations
 
         public string GenerateAccessToken(User user)
         {
-            var secretKey = _configuration["JwtSettings:SecretKey"] ?? "DefaultSuperSecretKey12345678901234567890";
-            var issuer = _configuration["JwtSettings:Issuer"] ?? "CloneEbay_CoreAPI";
-            var audience = _configuration["JwtSettings:Audience"] ?? "CloneEbay_Clients";
+            var secretKey = _configuration["JwtSettings:SecretKey"];
+            var issuer = _configuration["JwtSettings:Issuer"];
+            var audience = _configuration["JwtSettings:Audience"];
             var expirationMinutes = _configuration.GetValue<int>("JwtSettings:AccessTokenExpirationMinutes", 120);
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
@@ -30,9 +30,9 @@ namespace ClonEbay_CoreAPI.Services.Implementations
             var claims = new List<Claim>
             {
                 new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new(ClaimTypes.Name, user.Username ?? string.Empty),
-                new(ClaimTypes.Email, user.Email ?? string.Empty),
-                new(ClaimTypes.Role, user.Role ?? "User"),
+                new(ClaimTypes.Name, user.Username),
+                new(ClaimTypes.Email, user.Email),
+                new(ClaimTypes.Role, user.Role),
                 new("FullName", user.FullName ?? string.Empty)
             };
 
@@ -56,7 +56,7 @@ namespace ClonEbay_CoreAPI.Services.Implementations
 
         public ClaimsPrincipal? GetPrincipalFromExpiredToken(string token)
         {
-            var secretKey = _configuration["JwtSettings:SecretKey"] ?? "DefaultSuperSecretKey12345678901234567890";
+            var secretKey = _configuration["JwtSettings:SecretKey"];
             var tokenValidationParameters = new TokenValidationParameters
             {
                 ValidateAudience = false,

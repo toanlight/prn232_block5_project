@@ -35,17 +35,35 @@ namespace ClonEbay_CoreAPI.Services.Implementations
         public async Task<ApiResponse<UserInfoDto>> RegisterAsync(RegisterRequestDto request)
         {
             // 1. Kiểm tra Email đã tồn tại qua Repository
-            var emailExists = await _userRepository.ExistsByEmailAsync(request.Email);
-            if (emailExists)
+            var existingUserByEmail = await _userRepository.GetByEmailAsync(request.Email);
+            if (existingUserByEmail != null)
             {
-                throw new BadRequestException("Địa chỉ email này đã được sử dụng. Vui lòng chọn email khác.");
+                if (existingUserByEmail.IsEmailVerified)
+                {
+                    throw new BadRequestException("Địa chỉ email này đã được sử dụng. Vui lòng chọn email khác.");
+                }
+                else
+                {
+                    // Tài khoản trước đó chưa xác thực OTP -> Xóa tài khoản cũ để cho phép đăng ký mới
+                    _userRepository.Delete(existingUserByEmail);
+                    await _userRepository.SaveChangesAsync();
+                }
             }
 
             // 2. Kiểm tra Username đã tồn tại qua Repository
-            var usernameExists = await _userRepository.ExistsByUsernameAsync(request.Username);
-            if (usernameExists)
+            var existingUserByUsername = await _userRepository.GetByUsernameAsync(request.Username);
+            if (existingUserByUsername != null)
             {
-                throw new BadRequestException("Tên đăng nhập này đã được sử dụng. Vui lòng chọn tên khác.");
+                if (existingUserByUsername.IsEmailVerified)
+                {
+                    throw new BadRequestException("Tên đăng nhập này đã được sử dụng. Vui lòng chọn tên khác.");
+                }
+                else
+                {
+                    // Tài khoản trước đó chưa xác thực OTP -> Xóa tài khoản cũ để cho phép đăng ký mới
+                    _userRepository.Delete(existingUserByUsername);
+                    await _userRepository.SaveChangesAsync();
+                }
             }
 
             // 3. Hash mật khẩu bằng BCrypt
@@ -53,9 +71,9 @@ namespace ClonEbay_CoreAPI.Services.Implementations
 
             // 4. Sinh mã OTP 6 số
             var otpCode = RandomNumberGenerator.GetInt32(100000, 999999).ToString();
-            var otpExpiry = DateTime.UtcNow.AddMinutes(10);
+            var otpExpiry = DateTime.UtcNow.AddMinutes(3);
 
-            // 5. Tạo User mới và lưu qua Repository
+            // 5. Tạo User mới và lưu tạm thời để chờ xác thực OTP
             var user = new User
             {
                 Username = request.Username.Trim(),
@@ -89,7 +107,7 @@ namespace ClonEbay_CoreAPI.Services.Implementations
                 IsEmailVerified = user.IsEmailVerified
             };
 
-            return ApiResponse<UserInfoDto>.Ok(userInfo, "Đăng ký tài khoản thành công! Vui lòng kiểm tra email để lấy mã OTP xác thực.");
+            return ApiResponse<UserInfoDto>.Ok(userInfo, "Đăng ký tạm thời thành công! Vui lòng kiểm tra email và nhập mã OTP trong 3 phút để hoàn tất lưu tài khoản.");
         }
 
         public async Task<ApiResponse<bool>> VerifyOtpAsync(VerifyOtpRequestDto request)
@@ -97,7 +115,7 @@ namespace ClonEbay_CoreAPI.Services.Implementations
             var user = await _userRepository.GetByEmailAsync(request.Email);
             if (user == null)
             {
-                throw new NotFoundException("Không tìm thấy tài khoản với email này.");
+                throw new NotFoundException("Không tìm thấy thông tin đăng ký hoặc tài khoản chưa được tạo/đã bị hủy.");
             }
 
             if (user.IsEmailVerified)
@@ -107,15 +125,21 @@ namespace ClonEbay_CoreAPI.Services.Implementations
 
             if (string.IsNullOrEmpty(user.VerificationCode) || user.VerificationCode != request.OtpCode.Trim())
             {
-                throw new BadRequestException("Mã OTP không chính xác. Vui lòng kiểm tra lại.");
+                // Nhập sai OTP -> Hủy đăng ký, xóa tài khoản khỏi database
+                _userRepository.Delete(user);
+                await _userRepository.SaveChangesAsync();
+                throw new BadRequestException("Mã OTP không chính xác. Đăng ký không thành công và thông tin tài khoản đã bị hủy. Vui lòng đăng ký lại.");
             }
 
             if (user.VerificationExpiry.HasValue && user.VerificationExpiry.Value < DateTime.UtcNow)
             {
-                throw new BadRequestException("Mã OTP đã hết hạn. Vui lòng yêu cầu gửi lại mã mới.");
+                // OTP hết hạn -> Hủy đăng ký, xóa tài khoản khỏi database
+                _userRepository.Delete(user);
+                await _userRepository.SaveChangesAsync();
+                throw new BadRequestException("Mã OTP đã hết hiệu lực (quá 3 phút). Đăng ký không thành công và thông tin đã bị xóa. Vui lòng đăng ký lại.");
             }
 
-            // Kích hoạt tài khoản thành công
+            // Kích hoạt tài khoản chính thức thành công và lưu lại vào database
             user.IsEmailVerified = true;
             user.VerificationCode = null;
             user.VerificationExpiry = null;
@@ -124,7 +148,7 @@ namespace ClonEbay_CoreAPI.Services.Implementations
             _userRepository.Update(user);
             await _userRepository.SaveChangesAsync();
 
-            return ApiResponse<bool>.Ok(true, "Xác thực email thành công! Bạn có thể đăng nhập ngay bây giờ.");
+            return ApiResponse<bool>.Ok(true, "Xác thực email thành công! Tài khoản của bạn đã được kích hoạt chính thức. Bạn có thể đăng nhập ngay.");
         }
 
         public async Task<ApiResponse<bool>> ResendOtpAsync(ResendOtpRequestDto request)
@@ -143,7 +167,7 @@ namespace ClonEbay_CoreAPI.Services.Implementations
             // Tạo mã OTP mới
             var otpCode = RandomNumberGenerator.GetInt32(100000, 999999).ToString();
             user.VerificationCode = otpCode;
-            user.VerificationExpiry = DateTime.UtcNow.AddMinutes(10);
+            user.VerificationExpiry = DateTime.UtcNow.AddMinutes(3);
             user.UpdatedAt = DateTime.UtcNow;
 
             _userRepository.Update(user);
@@ -188,7 +212,13 @@ namespace ClonEbay_CoreAPI.Services.Implementations
             // Kiểm tra kích hoạt email
             if (!user.IsEmailVerified)
             {
-                throw new BadRequestException("Tài khoản chưa được kích hoạt email. Vui lòng xác thực email trước khi đăng nhập.");
+                if (user.VerificationExpiry.HasValue && user.VerificationExpiry.Value < DateTime.UtcNow)
+                {
+                    _userRepository.Delete(user);
+                    await _userRepository.SaveChangesAsync();
+                    throw new BadRequestException("Mã xác thực OTP đã hết hạn và tài khoản chưa được kích hoạt. Thông tin đăng ký đã bị hủy, vui lòng đăng ký lại.");
+                }
+                throw new BadRequestException("Tài khoản chưa hoàn tất xác thực OTP. Vui lòng nhập mã OTP để kích hoạt tài khoản trước khi đăng nhập.");
             }
 
             // Sinh Access Token và Refresh Token

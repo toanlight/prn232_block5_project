@@ -78,6 +78,9 @@ namespace CloneEbay_FE.Models
         [Display(Name = "Ảnh đại diện (URL)")]
         public string? AvatarUrl { get; set; }
 
+        [Display(Name = "Tải ảnh đại diện từ máy")]
+        public IFormFile? AvatarFile { get; set; }
+
         public string? Role { get; set; }
         public bool IsEmailVerified { get; set; }
         public DateTime CreatedAt { get; set; }

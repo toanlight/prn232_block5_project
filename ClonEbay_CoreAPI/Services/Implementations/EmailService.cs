@@ -43,7 +43,7 @@ namespace ClonEbay_CoreAPI.Services.Implementations
             <p>Cảm ơn bạn đã đăng ký tài khoản tại CloneEbay. Vui lòng sử dụng mã xác thực (OTP) dưới đây để hoàn tất kích hoạt tài khoản của bạn:</p>
             <div class=""otp-box"">
                 <div class=""otp-code"">{otpCode}</div>
-                <small style=""color: #666; margin-top: 6px; display: block;"">Mã có hiệu lực trong vòng 10 phút</small>
+                <small style=""color: #666; margin-top: 6px; display: block;"">Mã có hiệu lực trong vòng 3 phút</small>
             </div>
             <p>Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này.</p>
         </div>
@@ -91,19 +91,25 @@ namespace ClonEbay_CoreAPI.Services.Implementations
             var port = _configuration.GetValue<int>("EmailSettings:Port", 587);
             var senderEmail = _configuration["EmailSettings:SenderEmail"] ?? "noreply@cloneebay.com";
             var senderName = _configuration["EmailSettings:SenderName"] ?? "CloneEbay";
-            var username = _configuration["EmailSettings:Username"];
-            var password = _configuration["EmailSettings:Password"];
+            var username = _configuration["EmailSettings:Username"]?.Trim();
+            var password = _configuration["EmailSettings:Password"]?.Replace(" ", "").Trim();
             var enableSsl = _configuration.GetValue<bool>("EmailSettings:EnableSsl", true);
+
+            if (!string.IsNullOrWhiteSpace(username) && (string.IsNullOrWhiteSpace(senderEmail) || senderEmail.Contains("noreply")))
+            {
+                senderEmail = username;
+            }
 
             // Log OTP code ra console để developer / tester luôn xem được ngay
             _logger.LogInformation("=================================================");
             _logger.LogInformation("📧 [DEV/TEST OTP EMAIL] Gửi đến: {ToEmail} | Mã OTP/Code: {Code}", toEmail, codeForLog);
             _logger.LogInformation("=================================================");
 
-            // Nếu chưa cấu hình username/password SMTP thật, trả về true sau khi đã log OTP
+            // Nếu chưa cấu hình username/password SMTP thật, ghi cảnh báo và chuyển sang chế độ mock (chỉ log OTP)
             if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             {
-                _logger.LogWarning("Chưa cấu hình SMTP credentials (appsettings.json). Email được giả lập gửi thành công.");
+                _logger.LogWarning("SMTP credentials missing – chuyển sang chế độ mock. OTP sẽ chỉ được ghi log, không gửi email thực.");
+                // Skip actual sending; treat as success for dev/testing
                 return true;
             }
 
@@ -112,7 +118,10 @@ namespace ClonEbay_CoreAPI.Services.Implementations
                 using var client = new SmtpClient(smtpServer, port)
                 {
                     Credentials = new NetworkCredential(username, password),
-                    EnableSsl = enableSsl
+                    EnableSsl = enableSsl,
+                    DeliveryMethod = SmtpDeliveryMethod.Network,
+                    UseDefaultCredentials = false,
+                    Timeout = 15000
                 };
 
                 using var mailMessage = new MailMessage
@@ -125,13 +134,12 @@ namespace ClonEbay_CoreAPI.Services.Implementations
 
                 mailMessage.To.Add(toEmail);
                 await client.SendMailAsync(mailMessage);
-                _logger.LogInformation("Email gửi thành công qua SMTP đến {ToEmail}", toEmail);
+                _logger.LogInformation("✅ Email gửi thành công qua SMTP đến {ToEmail}", toEmail);
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi khi gửi email thực tế qua SMTP đến {ToEmail}. Mã code vẫn có trong log.", toEmail);
-                // Vẫn cho qua để không làm gián đoạn flow khi đang dev/offline
+                _logger.LogError(ex, "❌ Lỗi khi gửi email thực tế qua SMTP đến {ToEmail}. Lỗi: {Message}", toEmail, ex.Message);
                 return true;
             }
         }
