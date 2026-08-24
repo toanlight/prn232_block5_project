@@ -157,14 +157,83 @@ else
                                             <i class="bi bi-arrow-repeat me-1"></i>Mua lại
                                         </a>
 
-                                        <!-- Nút Viết Đánh Giá cho sản phẩm đã nhận -->
+                                        <!-- Nút Viết / Xem & Sửa Đánh Giá cho sản phẩm đã nhận -->
                                         @if (order.Status == "Delivered")
                                         {
                                             if (item.HasReviewed)
                                             {
-                                                <span class="badge bg-success bg-opacity-10 text-success border border-success px-3 py-1.5 rounded-pill fs-7">
+                                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 fs-7 fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#reviewModal-@item.Id-@item.ProductId" title="Bấm để xem, chỉnh sửa hoặc xóa đánh giá">
                                                     <i class="bi bi-star-fill text-warning me-1"></i>Đã đánh giá
-                                                </span>
+                                                </button>
+
+                                                <!-- Modal Chi Tiết & Chỉnh Sửa / Xóa Đánh Giá -->
+                                                <div class="modal fade" id="reviewModal-@item.Id-@item.ProductId" tabindex="-1" aria-hidden="true">
+                                                    <div class="modal-dialog modal-dialog-centered">
+                                                        <div class="modal-content rounded-4 border-0 shadow-lg">
+                                                            <div class="modal-header border-bottom pb-3">
+                                                                <h5 class="modal-title fw-bold text-dark">
+                                                                    <i class="bi bi-star-fill text-warning me-2"></i>Chi tiết đánh giá sản phẩm
+                                                                </h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            </div>
+                                                            <div class="modal-body p-4 text-start">
+                                                                <div class="d-flex align-items-center gap-3 p-3 bg-light rounded-3 mb-3 border">
+                                                                    @if (!string.IsNullOrEmpty(item.ImageUrl))
+                                                                    {
+                                                                        <img src="@item.ImageUrl" alt="@item.ProductTitle" class="rounded-3 border object-fit-cover" style="width: 52px; height: 52px;" />
+                                                                    }
+                                                                    <div>
+                                                                        <h6 class="fw-bold mb-0 text-dark">@item.ProductTitle</h6>
+                                                                        <span class="text-muted small">Đơn hàng #ORD-@order.Id</span>
+                                                                    </div>
+                                                                </div>
+
+                                                                <form asp-controller="Review" asp-action="Edit" method="post">
+                                                                    @Html.AntiForgeryToken()
+                                                                    <input type="hidden" name="reviewId" value="@(item.ReviewId ?? 0)" />
+                                                                    <input type="hidden" name="returnUrl" value="/Profile/Orders" />
+
+                                                                    <div class="mb-3">
+                                                                        <label class="form-label fw-bold small text-muted d-block mb-1">Số sao đánh giá:</label>
+                                                                        <div class="star-rating-select text-warning fs-4 cursor-pointer" data-target="rating-input-@item.Id-@item.ProductId">
+                                                                            @for (int s = 1; s <= 5; s++)
+                                                                            {
+                                                                                <i class="bi @(s <= (item.ReviewRating ?? 5) ? "bi-star-fill" : "bi-star") star-icon" data-rating="@s"></i>
+                                                                            }
+                                                                        </div>
+                                                                        <input type="hidden" name="rating" id="rating-input-@item.Id-@item.ProductId" value="@(item.ReviewRating ?? 5)" />
+                                                                    </div>
+
+                                                                    <div class="mb-3">
+                                                                        <label class="form-label fw-bold small text-muted">Nội dung nhận xét:</label>
+                                                                        <textarea name="comment" class="form-control rounded-3" rows="3" required placeholder="Nhập nhận xét của bạn...">@item.ReviewComment</textarea>
+                                                                    </div>
+
+                                                                    <div class="text-muted fs-7 mb-3">
+                                                                        <i class="bi bi-clock-history me-1"></i>Thời gian: @(item.ReviewDate?.ToString("dd/MM/yyyy HH:mm") ?? "N/A")
+                                                                    </div>
+
+                                                                    <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                                                        <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">
+                                                                            <i class="bi bi-check2-circle me-1"></i>Lưu chỉnh sửa
+                                                                        </button>
+                                                                    </div>
+                                                                </form>
+
+                                                                <div class="mt-2 text-end">
+                                                                    <form asp-controller="Review" asp-action="Delete" method="post" class="d-inline">
+                                                                        @Html.AntiForgeryToken()
+                                                                        <input type="hidden" name="id" value="@(item.ReviewId ?? 0)" />
+                                                                        <input type="hidden" name="returnUrl" value="/Profile/Orders" />
+                                                                        <button type="submit" class="btn btn-outline-danger rounded-pill px-3 fw-semibold" onclick="return confirm('Bạn có chắc muốn xóa đánh giá này?');">
+                                                                            <i class="bi bi-trash me-1"></i>Xóa đánh giá
+                                                                        </button>
+                                                                    </form>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             }
                                             else
                                             {
@@ -239,6 +308,29 @@ else
                         } else {
                             card.style.display = 'none';
                         }
+                    });
+                });
+            });
+
+            // Star rating click selector inside edit modal
+            document.querySelectorAll('.star-rating-select').forEach(container => {
+                const targetId = container.getAttribute('data-target');
+                const input = document.getElementById(targetId);
+                const stars = container.querySelectorAll('.star-icon');
+
+                stars.forEach(star => {
+                    star.addEventListener('click', function () {
+                        const val = parseInt(this.getAttribute('data-rating'));
+                        if (input) input.value = val;
+                        stars.forEach((s, idx) => {
+                            if (idx < val) {
+                                s.classList.remove('bi-star');
+                                s.classList.add('bi-star-fill');
+                            } else {
+                                s.classList.remove('bi-star-fill');
+                                s.classList.add('bi-star');
+                            }
+                        });
                     });
                 });
             });

@@ -24,6 +24,10 @@ namespace CloneEbay_FE.Models
         public decimal UnitPrice { get; set; }
         public decimal LineTotal => UnitPrice * Quantity;
         public bool HasReviewed { get; set; }
+        public int? ReviewId { get; set; }
+        public int? ReviewRating { get; set; }
+        public string? ReviewComment { get; set; }
+        public DateTime? ReviewDate { get; set; }
         public string? SellerName { get; set; }
         public int? SellerId { get; set; }
     }

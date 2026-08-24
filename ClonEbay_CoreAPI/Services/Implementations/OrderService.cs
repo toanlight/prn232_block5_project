@@ -208,7 +208,6 @@ public sealed class OrderService(CloneEbayDbContext context) : IOrderService
         var userReviews = await context.Reviews
             .AsNoTracking()
             .Where(r => r.ReviewerId == userId && r.ProductId.HasValue)
-            .Select(r => r.ProductId!.Value)
             .ToListAsync();
 
         var result = orders.Select(o =>
@@ -227,17 +226,25 @@ public sealed class OrderService(CloneEbayDbContext context) : IOrderService
                 ShippingStatus = shipping?.Status ?? "Preparing",
                 EstimatedArrival = shipping?.EstimatedArrival ?? o.OrderDate?.AddDays(3),
                 PaymentMethod = payment?.Method ?? "COD",
-                Items = o.OrderItems.Select(oi => new OrderItemDto
+                Items = o.OrderItems.Select(oi =>
                 {
-                    Id = oi.Id,
-                    ProductId = oi.ProductId ?? 0,
-                    ProductTitle = oi.Product?.Title ?? "Sản phẩm",
-                    ImageUrl = ProductService.FirstImage(oi.Product?.Images),
-                    Quantity = oi.Quantity ?? 1,
-                    UnitPrice = oi.UnitPrice ?? 0,
-                    HasReviewed = userReviews.Contains(oi.ProductId ?? 0),
-                    SellerId = oi.Product?.SellerId,
-                    SellerName = oi.Product?.Seller?.FullName ?? oi.Product?.Seller?.Username ?? "eBay Official Store"
+                    var review = userReviews.FirstOrDefault(r => r.ProductId == oi.ProductId);
+                    return new OrderItemDto
+                    {
+                        Id = oi.Id,
+                        ProductId = oi.ProductId ?? 0,
+                        ProductTitle = oi.Product?.Title ?? "Sản phẩm",
+                        ImageUrl = ProductService.FirstImage(oi.Product?.Images),
+                        Quantity = oi.Quantity ?? 1,
+                        UnitPrice = oi.UnitPrice ?? 0,
+                        HasReviewed = review != null,
+                        ReviewId = review?.Id,
+                        ReviewRating = review?.Rating,
+                        ReviewComment = review?.Comment,
+                        ReviewDate = review?.CreatedAt,
+                        SellerId = oi.Product?.SellerId,
+                        SellerName = oi.Product?.Seller?.FullName ?? oi.Product?.Seller?.Username ?? "eBay Official Store"
+                    };
                 }).ToList()
             };
         }).ToList();

@@ -13,38 +13,18 @@ namespace CloneEbay_FE.Controllers
             _apiClient = apiClient;
         }
 
-        // GET: /Review?productId=1
+        // GET: /Review
         [HttpGet]
-        public async Task<IActionResult> Index(int productId = 1)
+        public IActionResult Index()
         {
-            var response = await _apiClient.GetAsync<ProductReviewSummaryViewModel>($"products/{productId}/reviews");
-            if (response?.Success == true && response.Data != null)
-            {
-                return View(response.Data);
-            }
-
-            TempData["ErrorMessage"] = response?.Message ?? "Không thể tải danh sách đánh giá sản phẩm.";
-            return View(new ProductReviewSummaryViewModel { ProductId = productId });
+            return RedirectToAction("Orders", "Profile");
         }
 
-        // GET: /Review/MyReviews
+        // GET: /Review/MyReviews -> Redirect directly to My Orders
         [HttpGet]
-        public async Task<IActionResult> MyReviews()
+        public IActionResult MyReviews()
         {
-            var token = GetAccessToken();
-            if (string.IsNullOrEmpty(token))
-            {
-                return RedirectToLogin();
-            }
-
-            var response = await _apiClient.GetAsync<List<ReviewViewModel>>("reviews/my-reviews", token);
-            if (response?.Success == true)
-            {
-                return View(response.Data ?? new List<ReviewViewModel>());
-            }
-
-            TempData["ErrorMessage"] = response?.Message ?? "Không thể tải danh sách đánh giá của bạn.";
-            return View(new List<ReviewViewModel>());
+            return RedirectToAction("Orders", "Profile");
         }
 
         // GET: /Review/Create?productId=1
@@ -86,7 +66,7 @@ namespace CloneEbay_FE.Controllers
             if (response?.Success == true)
             {
                 TempData["SuccessMessage"] = response.Message ?? "Gửi đánh giá sản phẩm thành công!";
-                return RedirectToAction(nameof(Index), new { productId = model.ProductId });
+                return RedirectToAction("Orders", "Profile");
             }
 
             if (response?.StatusCode == StatusCodes.Status401Unauthorized)
@@ -98,10 +78,40 @@ namespace CloneEbay_FE.Controllers
             return View(model);
         }
 
+        // POST: /Review/Edit
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int reviewId, int rating, string? comment, string? returnUrl = null)
+        {
+            var token = GetAccessToken();
+            if (string.IsNullOrEmpty(token))
+            {
+                return RedirectToLogin();
+            }
+
+            var editDto = new { rating = rating, comment = comment };
+            var response = await _apiClient.PutAsync<ReviewViewModel>($"reviews/{reviewId}", editDto, token);
+            if (response?.Success == true)
+            {
+                TempData["SuccessMessage"] = response.Message ?? "Cập nhật đánh giá thành công!";
+            }
+            else
+            {
+                TempData["ErrorMessage"] = response?.Message ?? "Không thể cập nhật đánh giá.";
+            }
+
+            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
+            }
+
+            return RedirectToAction("Orders", "Profile");
+        }
+
         // POST: /Review/Delete/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Delete(int id, int productId)
+        public async Task<IActionResult> Delete(int id, int? productId = null, string? returnUrl = null)
         {
             var token = GetAccessToken();
             if (string.IsNullOrEmpty(token))
@@ -119,7 +129,17 @@ namespace CloneEbay_FE.Controllers
                 TempData["ErrorMessage"] = response?.Message ?? "Không thể xóa đánh giá.";
             }
 
-            return RedirectToAction(nameof(Index), new { productId });
+            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
+            }
+
+            if (productId.HasValue && productId.Value > 0)
+            {
+                return RedirectToAction(nameof(Index), new { productId = productId.Value });
+            }
+
+            return RedirectToAction("Orders", "Profile");
         }
 
         private string? GetAccessToken()
