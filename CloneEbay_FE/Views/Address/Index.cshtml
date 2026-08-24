@@ -1,0 +1,107 @@
+@model List<CloneEbay_FE.Models.AddressViewModel>
+@using System.Linq
+@{
+    ViewData["Title"] = "Địa chỉ giao hàng";
+}
+
+<div class="address-page mx-auto">
+    <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-4">
+        <div>
+            <span class="section-kicker">TÀI KHOẢN CỦA TÔI</span>
+            <h1 class="h3 fw-bold mb-1">Địa chỉ giao hàng</h1>
+            <p class="text-muted mb-0">Quản lý nhiều địa chỉ và chọn địa chỉ dùng mặc định khi đặt hàng.</p>
+        </div>
+        <a asp-action="Create" class="btn-main address-add-button">
+            <i class="bi bi-plus-lg me-2"></i>Thêm địa chỉ mới
+        </a>
+    </div>
+
+    @if (Model.Count == 0)
+    {
+        <div class="simple-card address-empty text-center">
+            <div class="empty-icon mx-auto mb-3"><i class="bi bi-geo-alt"></i></div>
+            <h2 class="h5 fw-bold">Bạn chưa có địa chỉ giao hàng</h2>
+            <p class="text-muted mb-4">Thêm địa chỉ đầu tiên để sử dụng khi đặt hàng. Địa chỉ này sẽ tự động được chọn làm mặc định.</p>
+            <a asp-action="Create" class="btn btn-primary px-4 py-2 rounded-3 fw-semibold">
+                <i class="bi bi-plus-lg me-2"></i>Thêm địa chỉ
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var address in Model)
+            {
+                var addressParts = new[] { address.Street, address.State, address.City, address.PostalCode, address.Country }
+                    .Where(value => !string.IsNullOrWhiteSpace(value));
+                var displayAddress = string.Join(", ", addressParts);
+
+                <div class="col-12 col-lg-6">
+                    <article class="address-card @(address.IsDefault ? "is-default" : string.Empty)">
+                        <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="address-icon"><i class="bi bi-house-door"></i></div>
+                                <div>
+                                    <h2 class="h6 fw-bold mb-1">@address.FullName</h2>
+                                    <span class="text-muted small"><i class="bi bi-telephone me-1"></i>@address.Phone</span>
+                                </div>
+                            </div>
+                            @if (address.IsDefault)
+                            {
+                                <span class="default-badge"><i class="bi bi-check-circle-fill me-1"></i>Mặc định</span>
+                            }
+                        </div>
+
+                        <p class="address-text mb-4">
+                            <i class="bi bi-geo-alt-fill text-primary me-2"></i>@displayAddress
+                        </p>
+
+                        <div class="address-actions d-flex flex-wrap gap-2 pt-3 border-top">
+                            <a asp-action="Edit" asp-route-id="@address.Id" class="btn btn-sm btn-outline-secondary rounded-3 px-3">
+                                <i class="bi bi-pencil me-1"></i>Sửa
+                            </a>
+
+                            @if (!address.IsDefault)
+                            {
+                                <form asp-action="SetDefault" asp-route-id="@address.Id" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-outline-primary rounded-3 px-3">
+                                        <i class="bi bi-check2-circle me-1"></i>Đặt mặc định
+                                    </button>
+                                </form>
+                            }
+
+                            <form asp-action="Delete" asp-route-id="@address.Id" method="post" class="ms-sm-auto"
+                                  onsubmit="return confirm('Bạn có chắc muốn xóa địa chỉ này?');">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-3 px-3">
+                                    <i class="bi bi-trash3 me-1"></i>Xóa
+                                </button>
+                            </form>
+                        </div>
+                    </article>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .address-page { max-width: 1040px; }
+    .section-kicker { color: var(--primary); font-size: 12px; font-weight: 800; letter-spacing: .12em; }
+    .address-add-button { display: inline-flex; align-items: center; justify-content: center; width: auto; text-decoration: none; white-space: nowrap; }
+    .address-empty { padding: 56px 28px; }
+    .empty-icon, .address-icon { display: flex; align-items: center; justify-content: center; color: var(--primary); background: #eff6ff; border-radius: 14px; }
+    .empty-icon { width: 64px; height: 64px; font-size: 28px; }
+    .address-icon { width: 44px; height: 44px; flex-shrink: 0; font-size: 20px; }
+    .address-card { height: 100%; padding: 24px; background: #fff; border: 1.5px solid var(--border-color); border-radius: 14px; box-shadow: 0 3px 10px rgba(15, 23, 42, .04); }
+    .address-card.is-default { border-color: #60a5fa; box-shadow: 0 0 0 3px rgba(37, 99, 235, .08); }
+    .default-badge { flex-shrink: 0; color: #166534; background: #dcfce7; border: 1px solid #bbf7d0; border-radius: 999px; padding: 5px 10px; font-size: 12px; font-weight: 700; }
+    .address-text { color: #475569; line-height: 1.65; }
+    .address-actions form { margin: 0; }
+    @@media (max-width: 575.98px) {
+        .address-add-button { width: 100%; }
+        .address-card { padding: 20px; }
+        .address-actions > *, .address-actions form, .address-actions button, .address-actions a { flex: 1 1 auto; }
+    }
+</style>

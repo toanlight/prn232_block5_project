@@ -82,27 +82,43 @@ public partial class CloneEbayDbContext : DbContext
 
             entity.ToTable("Address");
 
+            entity.HasIndex(e => e.UserId, "UX_Address_User_Default")
+                .IsUnique()
+                .HasFilter("[isDefault] = 1 AND [userId] IS NOT NULL");
+
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.City)
-                .HasMaxLength(50)
+                .HasMaxLength(100)
+                .IsRequired()
                 .HasColumnName("city");
             entity.Property(e => e.Country)
-                .HasMaxLength(50)
+                .HasMaxLength(100)
+                .IsRequired()
                 .HasColumnName("country");
             entity.Property(e => e.FullName)
                 .HasMaxLength(100)
+                .IsRequired()
                 .HasColumnName("fullName");
-            entity.Property(e => e.IsDefault).HasColumnName("isDefault");
+            entity.Property(e => e.IsDefault)
+                .HasDefaultValue(false)
+                .HasColumnName("isDefault");
             entity.Property(e => e.Phone)
                 .HasMaxLength(20)
+                .IsRequired()
                 .HasColumnName("phone");
+            entity.Property(e => e.PostalCode)
+                .HasMaxLength(20)
+                .HasColumnName("postalCode");
             entity.Property(e => e.State)
-                .HasMaxLength(50)
+                .HasMaxLength(100)
                 .HasColumnName("state");
             entity.Property(e => e.Street)
-                .HasMaxLength(100)
+                .HasMaxLength(200)
+                .IsRequired()
                 .HasColumnName("street");
-            entity.Property(e => e.UserId).HasColumnName("userId");
+            entity.Property(e => e.UserId)
+                .IsRequired()
+                .HasColumnName("userId");
 
             entity.HasOne(d => d.User).WithMany(p => p.Addresses)
                 .HasForeignKey(d => d.UserId)

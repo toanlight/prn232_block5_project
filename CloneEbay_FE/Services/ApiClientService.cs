@@ -122,11 +122,27 @@ namespace CloneEbay_FE.Services
         public async Task<ApiResponseModel<T>?> DeleteAsync<T>(string endpoint, string? bearerToken = null)
         {
             var request = new HttpRequestMessage(HttpMethod.Delete, endpoint);
-            if (!string.IsNullOrEmpty(bearerToken)) request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
+            if (!string.IsNullOrEmpty(bearerToken))
+            {
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
+            }
+
             var response = await _httpClient.SendAsync(request);
             var content = await response.Content.ReadAsStringAsync();
-            try { return JsonSerializer.Deserialize<ApiResponseModel<T>>(content, _jsonOptions); }
-            catch { return new ApiResponseModel<T> { Success = response.IsSuccessStatusCode, StatusCode = (int)response.StatusCode, Message = content }; }
+
+            try
+            {
+                return JsonSerializer.Deserialize<ApiResponseModel<T>>(content, _jsonOptions);
+            }
+            catch
+            {
+                return new ApiResponseModel<T>
+                {
+                    Success = response.IsSuccessStatusCode,
+                    StatusCode = (int)response.StatusCode,
+                    Message = content
+                };
+            }
         }
     }
 }

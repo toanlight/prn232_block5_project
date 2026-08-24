@@ -1,0 +1,57 @@
+@model CloneEbay_FE.Models.AddressViewModel
+
+<div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
+
+<div class="row g-3">
+    <div class="col-12 col-md-7">
+        <label asp-for="FullName" class="form-label"></label>
+        <input asp-for="FullName" class="form-control" autocomplete="name" placeholder="Nguyễn Văn A" />
+        <span asp-validation-for="FullName" class="text-danger small"></span>
+    </div>
+    <div class="col-12 col-md-5">
+        <label asp-for="Phone" class="form-label"></label>
+        <input asp-for="Phone" class="form-control" autocomplete="tel" inputmode="tel" placeholder="0912 345 678" />
+        <span asp-validation-for="Phone" class="text-danger small"></span>
+    </div>
+    <div class="col-12">
+        <label asp-for="Street" class="form-label"></label>
+        <input asp-for="Street" class="form-control" autocomplete="street-address" placeholder="Số nhà, tên đường, phường/xã" />
+        <span asp-validation-for="Street" class="text-danger small"></span>
+    </div>
+    <div class="col-12 col-md-6">
+        <label asp-for="State" class="form-label"></label>
+        <input asp-for="State" class="form-control" placeholder="Quận 1" />
+        <span asp-validation-for="State" class="text-danger small"></span>
+    </div>
+    <div class="col-12 col-md-6">
+        <label asp-for="City" class="form-label"></label>
+        <input asp-for="City" class="form-control" autocomplete="address-level1" placeholder="TP. Hồ Chí Minh" />
+        <span asp-validation-for="City" class="text-danger small"></span>
+    </div>
+    <div class="col-12 col-md-7">
+        <label asp-for="Country" class="form-label"></label>
+        <input asp-for="Country" class="form-control" autocomplete="country-name" />
+        <span asp-validation-for="Country" class="text-danger small"></span>
+    </div>
+    <div class="col-12 col-md-5">
+        <label asp-for="PostalCode" class="form-label"></label>
+        <input asp-for="PostalCode" class="form-control" autocomplete="postal-code" placeholder="700000" />
+        <span asp-validation-for="PostalCode" class="text-danger small"></span>
+    </div>
+</div>
+
+<div class="form-check address-default-check mt-4">
+    @if (Model.Id > 0 && Model.IsDefault)
+    {
+        <input asp-for="IsDefault" type="hidden" />
+        <input type="checkbox" class="form-check-input" checked disabled />
+        <label asp-for="IsDefault" class="form-check-label fw-semibold"></label>
+        <div class="form-text">Địa chỉ này đang được sử dụng làm mặc định.</div>
+    }
+    else
+    {
+        <input asp-for="IsDefault" class="form-check-input" />
+        <label asp-for="IsDefault" class="form-check-label fw-semibold"></label>
+        <div class="form-text">Địa chỉ đầu tiên luôn được tự động chọn làm mặc định.</div>
+    }
+</div>
