@@ -1,0 +1,145 @@
+@model CloneEbay_FE.Models.CheckoutViewModel
+@{
+    ViewData["Title"] = "Xác nhận đặt hàng";
+}
+
+<div class="d-flex align-items-center gap-2 mb-4">
+    <a asp-controller="Cart" asp-action="Index" class="btn btn-outline-secondary btn-sm" aria-label="Quay lại giỏ hàng">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <div>
+        <h1 class="h3 mb-1">Xác nhận đặt hàng</h1>
+        <p class="text-muted mb-0">Kiểm tra sản phẩm, địa chỉ giao hàng và thanh toán.</p>
+    </div>
+</div>
+
+<form asp-action="PlaceOrder" method="post" id="checkout-form">
+    @Html.AntiForgeryToken()
+    <div class="row g-4 align-items-start">
+        <div class="col-lg-8">
+            <section class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="h5 mb-0"><i class="bi bi-geo-alt text-primary"></i> Địa chỉ giao hàng</h2>
+                        <a asp-controller="Address" asp-action="Create" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-plus-lg"></i> Thêm địa chỉ
+                        </a>
+                    </div>
+
+                    @if (!Model.Addresses.Any())
+                    {
+                        <div class="alert alert-warning mb-0">
+                            Bạn chưa có địa chỉ giao hàng.
+                            <a asp-controller="Address" asp-action="Create" class="alert-link">Thêm địa chỉ ngay</a>.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="vstack gap-3">
+                            @foreach (var address in Model.Addresses)
+                            {
+                                var selected = address.Id == Model.SelectedAddressId;
+                                <label class="border rounded-3 p-3 d-flex gap-3 cursor-pointer address-option @(selected ? "border-primary bg-primary-subtle" : "")">
+                                    <input class="form-check-input mt-1 address-radio" type="radio" name="AddressId"
+                                           value="@address.Id" data-shipping="@address.ShippingFee.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                           checked="@selected" />
+                                    <span class="flex-grow-1">
+                                        <span class="d-flex align-items-center gap-2 flex-wrap">
+                                            <strong>@address.FullName</strong>
+                                            <span class="text-muted">@address.Phone</span>
+                                            @if (address.IsDefault)
+                                            {
+                                                <span class="badge text-bg-primary">Mặc định</span>
+                                            }
+                                        </span>
+                                        <span class="d-block text-muted small mt-1">
+                                            @address.Street@if (!string.IsNullOrWhiteSpace(address.State)) {<text>, @address.State</text>}, @address.City, @address.Country
+                                        </span>
+                                    </span>
+                                </label>
+                            }
+                        </div>
+                    }
+                </div>
+            </section>
+
+            <section class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <h2 class="h5 mb-3"><i class="bi bi-box-seam text-primary"></i> Sản phẩm (@Model.ItemCount)</h2>
+                    @foreach (var item in Model.Items)
+                    {
+                        <div class="d-flex gap-3 py-3 border-top align-items-center">
+                            @if (!string.IsNullOrWhiteSpace(item.ImageUrl))
+                            {
+                                <img src="@item.ImageUrl" alt="@item.Title" class="rounded-2 object-fit-cover flex-shrink-0" style="width:72px;height:72px" />
+                            }
+                            else
+                            {
+                                <div class="rounded-2 bg-light d-flex align-items-center justify-content-center flex-shrink-0" style="width:72px;height:72px">
+                                    <i class="bi bi-image text-muted fs-3"></i>
+                                </div>
+                            }
+                            <div class="flex-grow-1 min-width-0">
+                                <div class="fw-semibold text-truncate">@item.Title</div>
+                                <div class="text-muted small">@item.UnitPrice.ToString("N0") ₫ × @item.Quantity</div>
+                            </div>
+                            <strong>@item.LineTotal.ToString("N0") ₫</strong>
+                        </div>
+                    }
+                </div>
+            </section>
+
+            <section class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h2 class="h5 mb-3"><i class="bi bi-credit-card text-primary"></i> Phương thức thanh toán</h2>
+                    <label class="border rounded-3 p-3 d-flex gap-3 cursor-pointer mb-3">
+                        <input class="form-check-input" type="radio" name="PaymentMethod" value="COD" checked />
+                        <span><strong>Thanh toán khi nhận hàng (COD)</strong><span class="d-block text-muted small">Thanh toán cho đơn vị vận chuyển khi nhận hàng.</span></span>
+                    </label>
+                    <label class="border rounded-3 p-3 d-flex gap-3 cursor-pointer">
+                        <input class="form-check-input" type="radio" name="PaymentMethod" value="PayPal" />
+                        <span><strong>PayPal</strong><span class="d-block text-muted small">Thanh toán PayPal mô phỏng cho bài tập.</span></span>
+                    </label>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-lg-4">
+            <aside class="card border-0 shadow-sm position-sticky" style="top: 90px">
+                <div class="card-body p-4">
+                    <h2 class="h5 mb-3">Tóm tắt đơn hàng</h2>
+                    <div class="d-flex justify-content-between mb-2"><span class="text-muted">Sản phẩm (@Model.ItemCount)</span><span>@Model.Subtotal.ToString("N0") ₫</span></div>
+                    <div class="d-flex justify-content-between mb-3"><span class="text-muted">Phí vận chuyển</span><span id="shipping-fee">@Model.ShippingFee.ToString("N0") ₫</span></div>
+                    <hr />
+                    <div class="d-flex justify-content-between fw-bold fs-5 mb-4"><span>Tổng cộng</span><span id="order-total" class="text-danger">@Model.Total.ToString("N0") ₫</span></div>
+                    <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold" @(!Model.Addresses.Any() ? "disabled" : null)>
+                        <i class="bi bi-bag-check"></i> Tiến hành đặt hàng
+                    </button>
+                    <p class="small text-muted text-center mt-2 mb-0">Tồn kho và tổng tiền sẽ được API kiểm tra lại.</p>
+                </div>
+            </aside>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+    const subtotal = @Model.Subtotal.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    const money = value => new Intl.NumberFormat('vi-VN').format(value) + ' ₫';
+    const options = document.querySelectorAll('.address-option');
+
+    document.querySelectorAll('.address-radio').forEach(radio => {
+        radio.addEventListener('change', () => {
+            options.forEach(option => option.classList.remove('border-primary', 'bg-primary-subtle'));
+            radio.closest('.address-option')?.classList.add('border-primary', 'bg-primary-subtle');
+            const shipping = Number(radio.dataset.shipping || 0);
+            document.getElementById('shipping-fee').textContent = money(shipping);
+            document.getElementById('order-total').textContent = money(subtotal + shipping);
+        });
+    });
+
+    document.getElementById('checkout-form')?.addEventListener('submit', event => {
+        if (!confirm('Xác nhận tạo đơn hàng với thông tin đã chọn?')) event.preventDefault();
+    });
+</script>
+}

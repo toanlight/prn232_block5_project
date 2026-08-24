@@ -18,21 +18,21 @@ namespace CloneEbay_FE.Models
         public string Phone { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Vui lòng nhập địa chỉ chi tiết")]
-        [StringLength(200, ErrorMessage = "Địa chỉ chi tiết tối đa 200 ký tự")]
+        [StringLength(100, ErrorMessage = "Địa chỉ chi tiết tối đa 100 ký tự")]
         [Display(Name = "Địa chỉ chi tiết")]
         public string Street { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Vui lòng nhập Tỉnh/Thành phố")]
-        [StringLength(100, ErrorMessage = "Tỉnh/Thành phố tối đa 100 ký tự")]
+        [StringLength(50, ErrorMessage = "Tỉnh/Thành phố tối đa 50 ký tự")]
         [Display(Name = "Tỉnh/Thành phố")]
         public string City { get; set; } = string.Empty;
 
-        [StringLength(100, ErrorMessage = "Quận/Huyện tối đa 100 ký tự")]
+        [StringLength(50, ErrorMessage = "Quận/Huyện tối đa 50 ký tự")]
         [Display(Name = "Quận/Huyện")]
         public string? State { get; set; }
 
         [Required(ErrorMessage = "Vui lòng nhập quốc gia")]
-        [StringLength(100, ErrorMessage = "Quốc gia tối đa 100 ký tự")]
+        [StringLength(50, ErrorMessage = "Quốc gia tối đa 50 ký tự")]
         [Display(Name = "Quốc gia")]
         public string Country { get; set; } = "Việt Nam";
 
