@@ -43,6 +43,7 @@ namespace ClonEbay_CoreAPI.Controllers
         // ─── POST /api/return-requests ────────────────────────────────────────
         /// <summary>Buyer gửi yêu cầu hoàn trả mới (chỉ khi Order.Status = Delivered).</summary>
         [HttpPost]
+        [Authorize(Roles = "Buyer")]
         [ProducesResponseType(typeof(ApiResponse<ReturnRequestDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
@@ -55,6 +56,7 @@ namespace ClonEbay_CoreAPI.Controllers
         // ─── PUT /api/return-requests/{id}/cancel ────────────────────────────
         /// <summary>Buyer huỷ yêu cầu hoàn trả đang Pending của mình.</summary>
         [HttpPut("{id:int}/cancel")]
+        [Authorize(Roles = "Buyer")]
         [ProducesResponseType(typeof(ApiResponse<ReturnRequestDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
@@ -67,6 +69,7 @@ namespace ClonEbay_CoreAPI.Controllers
         // ─── PUT /api/return-requests/{id}/status ────────────────────────────
         /// <summary>Seller hoặc Admin duyệt / từ chối yêu cầu hoàn trả.</summary>
         [HttpPut("{id:int}/status")]
+        [Authorize(Roles = "Seller,Admin")]
         [ProducesResponseType(typeof(ApiResponse<ReturnRequestDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
