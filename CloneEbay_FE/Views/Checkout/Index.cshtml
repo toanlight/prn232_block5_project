@@ -109,7 +109,14 @@
                 <div class="card-body p-4">
                     <h2 class="h5 mb-3">Tóm tắt đơn hàng</h2>
                     <div class="d-flex justify-content-between mb-2"><span class="text-muted">Sản phẩm (@Model.ItemCount)</span><span>@Model.Subtotal.ToString("N0") ₫</span></div>
-                    <div class="d-flex justify-content-between mb-3"><span class="text-muted">Phí vận chuyển</span><span id="shipping-fee">@Model.ShippingFee.ToString("N0") ₫</span></div>
+                    <div class="d-flex justify-content-between mb-2"><span class="text-muted">Phí vận chuyển</span><span id="shipping-fee">@Model.ShippingFee.ToString("N0") ₫</span></div>
+                    @if (Model.TotalDiscount > 0)
+                    {
+                        <div class="d-flex justify-content-between mb-2 text-success">
+                            <span><i class="bi bi-ticket-perforated me-1"></i>Giảm giá (Coupon)</span>
+                            <span id="discount-amount">-@Model.TotalDiscount.ToString("N0") ₫</span>
+                        </div>
+                    }
                     <hr />
                     <div class="d-flex justify-content-between fw-bold fs-5 mb-4"><span>Tổng cộng</span><span id="order-total" class="text-danger">@Model.Total.ToString("N0") ₫</span></div>
                     <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold" @(!Model.Addresses.Any() ? "disabled" : null)>
@@ -125,6 +132,7 @@
 @section Scripts {
 <script>
     const subtotal = @Model.Subtotal.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    const totalDiscount = @Model.TotalDiscount.ToString(System.Globalization.CultureInfo.InvariantCulture);
     const money = value => new Intl.NumberFormat('vi-VN').format(value) + ' ₫';
     const options = document.querySelectorAll('.address-option');
 
@@ -134,7 +142,8 @@
             radio.closest('.address-option')?.classList.add('border-primary', 'bg-primary-subtle');
             const shipping = Number(radio.dataset.shipping || 0);
             document.getElementById('shipping-fee').textContent = money(shipping);
-            document.getElementById('order-total').textContent = money(subtotal + shipping);
+            const finalTotal = Math.max(0, subtotal + shipping - totalDiscount);
+            document.getElementById('order-total').textContent = money(finalTotal);
         });
     });
 

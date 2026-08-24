@@ -7,8 +7,27 @@ public sealed class SellerViewModel { public int Id { get; set; } public string 
 public sealed class ProductDetailReviewViewModel { public int Id { get; set; } public int Rating { get; set; } public string? Comment { get; set; } public string ReviewerName { get; set; } = string.Empty; public DateTime? CreatedAt { get; set; } }
 public sealed class PagedProductViewModel { public List<ProductCardViewModel> Items { get; set; } = []; public int Page { get; set; } public int PageSize { get; set; } public int TotalItems { get; set; } public int TotalPages { get; set; } }
 public sealed class ProductIndexViewModel { public PagedProductViewModel Results { get; set; } = new(); public List<CategoryViewModel> Categories { get; set; } = []; public string? Search { get; set; } public int? CategoryId { get; set; } public decimal? MinPrice { get; set; } public decimal? MaxPrice { get; set; } }
-public sealed class CartItemViewModel { public int ProductId { get; set; } public string Title { get; set; } = string.Empty; public string? ImageUrl { get; set; } public decimal UnitPrice { get; set; } public int Quantity { get; set; } public decimal LineTotal { get; set; } }
-public sealed class CartViewModel { public List<CartItemViewModel> Items { get; set; } = []; public decimal Total { get; set; } public int ItemCount { get; set; } }
+public sealed class CartItemViewModel 
+{ 
+    public int ProductId { get; set; } 
+    public string Title { get; set; } = string.Empty; 
+    public string? ImageUrl { get; set; } 
+    public decimal UnitPrice { get; set; } 
+    public int Quantity { get; set; } 
+    public decimal LineTotal { get; set; } 
+    public string? AppliedCouponCode { get; set; }
+    public decimal DiscountAmount { get; set; }
+    public decimal FinalLineTotal => Math.Max(0, LineTotal - DiscountAmount);
+}
+public sealed class CartViewModel 
+{ 
+    public List<CartItemViewModel> Items { get; set; } = []; 
+    public decimal Total { get; set; } 
+    public int ItemCount { get; set; } 
+    public decimal TotalDiscount => Items.Sum(i => i.DiscountAmount);
+    public decimal FinalTotal => Math.Max(0, Total - TotalDiscount);
+    public List<CouponViewModel> AvailableCoupons { get; set; } = [];
+}
 public sealed class AddCartItemViewModel { [Range(1, int.MaxValue)] public int ProductId { get; set; } [Range(1, 99)] public int Quantity { get; set; } = 1; public string Title { get; set; } = string.Empty; public string? ImageUrl { get; set; } public decimal UnitPrice { get; set; } }
 
 public sealed class CheckoutAddressViewModel
@@ -33,6 +52,7 @@ public sealed class CheckoutViewModel
     public int ItemCount { get; set; }
     public decimal Subtotal { get; set; }
     public decimal ShippingFee { get; set; }
+    public decimal TotalDiscount { get; set; }
     public decimal Total { get; set; }
 }
 
@@ -44,6 +64,8 @@ public sealed class PlaceOrderViewModel
     [Required]
     [RegularExpression("^(COD|PayPal)$", ErrorMessage = "Phương thức thanh toán không hợp lệ")]
     public string PaymentMethod { get; set; } = "COD";
+
+    public Dictionary<int, string>? AppliedCoupons { get; set; }
 }
 
 public sealed class OrderCreatedViewModel
@@ -53,6 +75,7 @@ public sealed class OrderCreatedViewModel
     public int ItemCount { get; set; }
     public decimal Subtotal { get; set; }
     public decimal ShippingFee { get; set; }
+    public decimal TotalDiscount { get; set; }
     public decimal Total { get; set; }
     public string Status { get; set; } = string.Empty;
     public string PaymentMethod { get; set; } = string.Empty;

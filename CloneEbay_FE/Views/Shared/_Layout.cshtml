@@ -169,12 +169,6 @@
             <div class="d-flex align-items-center gap-2">
                 <a asp-controller="Products" asp-action="Index" class="nav-link-custom">Sản phẩm</a>
                 <a asp-controller="Cart" asp-action="Index" class="nav-link-custom"><i class="bi bi-cart3"></i> Giỏ hàng</a>
-                <a asp-controller="Coupon" asp-action="Index" class="nav-link-custom d-none d-md-flex align-items-center gap-1">
-                    <i class="bi bi-ticket-perforated text-primary"></i> Mã giảm giá
-                </a>
-                <a asp-controller="Review" asp-action="Index" class="nav-link-custom d-none d-md-flex align-items-center gap-1">
-                    <i class="bi bi-star text-warning"></i> Đánh giá
-                </a>
 
                 @if (isLoggedIn)
                 {
@@ -191,6 +185,9 @@
                     <a asp-controller="Address" asp-action="Index" class="nav-link-custom d-none d-lg-flex align-items-center gap-2">
                         <i class="bi bi-geo-alt fs-5 text-primary"></i>
                         <span>Địa chỉ</span>
+                    </a>
+                    <a asp-controller="Profile" asp-action="Orders" class="nav-link-custom d-none d-md-flex align-items-center gap-1">
+                        <i class="bi bi-box-seam text-primary"></i> Đơn mua
                     </a>
                     <a asp-controller="Profile" asp-action="Index" class="nav-link-custom d-flex align-items-center gap-2">
                         @if (!string.IsNullOrEmpty(avatarUrl))
@@ -237,7 +234,7 @@
     <main class="main-container">
         <div class="container">
             <!-- Alert Messages -->
-            @if (TempData["SuccessMessage"] != null)
+            @if (!string.IsNullOrWhiteSpace(TempData["SuccessMessage"]?.ToString()))
             {
                 <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-sm d-flex align-items-center" role="alert">
                     <i class="bi bi-check-circle-fill me-2 fs-5 text-success"></i>
@@ -245,7 +242,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             }
-            @if (TempData["ErrorMessage"] != null)
+            @if (!string.IsNullOrWhiteSpace(TempData["ErrorMessage"]?.ToString()))
             {
                 <div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-sm d-flex align-items-center" role="alert">
                     <i class="bi bi-exclamation-circle-fill me-2 fs-5 text-danger"></i>
@@ -253,7 +250,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             }
-            @if (TempData["WarningMessage"] != null)
+            @if (!string.IsNullOrWhiteSpace(TempData["WarningMessage"]?.ToString()))
             {
                 <div class="alert alert-warning alert-dismissible fade show rounded-3 shadow-sm d-flex align-items-center" role="alert">
                     <i class="bi bi-info-circle-fill me-2 fs-5 text-warning"></i>
@@ -278,69 +275,486 @@
 
     <!-- SignalR Real-time Connection Script -->
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const userAccessToken = "@accessToken";
+    document.addEventListener('DOMContentLoaded', function () {
 
-            if (userAccessToken && typeof signalR !== 'undefined') {
-                const connection = new signalR.HubConnectionBuilder()
-                    .withUrl("http://localhost:5180/hubs/notification?access_token=" + encodeURIComponent(userAccessToken))
-                    .withAutomaticReconnect()
-                    .build();
+        // =====================================================
+        // 1. GET ACCESS TOKEN
+        // =====================================================
 
-                function handleIncomingNotification(data, type, iconClass, toastBg) {
-                    // Show Toast Popup
-                    const toastEl = document.getElementById('liveNotifToast');
-                    const toastMsg = document.getElementById('toastMessage');
-                    const toastIcon = document.getElementById('toastIcon');
+        const userAccessToken = "@accessToken";
 
-                    if (toastMsg && toastEl) {
-                        toastMsg.textContent = data.message || 'Thông báo mới!';
-                        if (toastIcon) toastIcon.className = 'bi ' + iconClass + ' fs-5';
-                        toastEl.className = 'toast align-items-center text-white border-0 shadow-lg ' + toastBg;
+        // Không có token thì không kết nối SignalR
+        if (!userAccessToken || userAccessToken.trim() === '') {
+            console.log("SignalR: User chưa đăng nhập hoặc không có access token.");
+            return;
+        }
 
-                        const bsToast = new bootstrap.Toast(toastEl, { delay: 5000 });
-                        bsToast.show();
-                    }
+        // Kiểm tra SignalR library
+        if (typeof signalR === 'undefined') {
+            console.error("SignalR library chưa được load.");
+            return;
+        }
 
-                    // Increment Badge
-                    const badge = document.getElementById('notifBadge');
-                    if (badge) {
-                        let currentCount = parseInt(badge.textContent) || 0;
-                        currentCount++;
-                        badge.textContent = currentCount;
-                        badge.classList.remove('d-none');
-                    }
 
-                    // Save History to LocalStorage
-                    const history = JSON.parse(localStorage.getItem('cloneEbay_notifications') || '[]');
-                    history.unshift({
-                        type: type,
-                        message: data.message || '',
-                        time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-                    });
-                    localStorage.setItem('cloneEbay_notifications', JSON.stringify(history));
+        // =====================================================
+        // 2. CREATE SIGNALR CONNECTION
+        // =====================================================
+
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("http://localhost:5180/hubs/notification", {
+                accessTokenFactory: function () {
+                    return userAccessToken;
+                }
+            })
+            .withAutomaticReconnect([0, 2000, 5000, 10000])
+            .configureLogging(signalR.LogLevel.Information)
+            .build();
+
+
+        // =====================================================
+        // 3. HANDLE INCOMING NOTIFICATION
+        // =====================================================
+
+        function handleIncomingNotification(
+            data,
+            type,
+            iconClass,
+            toastBg
+        ) {
+
+            console.log(
+                "Nhận notification:",
+                type,
+                data
+            );
+
+
+            // =================================================
+            // 3.1 SHOW TOAST
+            // =================================================
+
+            const toastEl =
+                document.getElementById('liveNotifToast');
+
+            const toastMsg =
+                document.getElementById('toastMessage');
+
+            const toastIcon =
+                document.getElementById('toastIcon');
+
+
+            if (toastMsg && toastEl) {
+
+                // Set message
+                toastMsg.textContent =
+                    data?.message ||
+                    'Thông báo mới!';
+
+
+                // Set icon
+                if (toastIcon) {
+
+                    toastIcon.className =
+                        'bi ' +
+                        iconClass +
+                        ' fs-5';
+
                 }
 
-                connection.on("ReceiveOrderNotification", function (data) {
-                    handleIncomingNotification(data, "Order", "bi-box-seam-fill", "bg-success");
-                });
 
-                connection.on("ReceivePromotionNotification", function (data) {
-                    handleIncomingNotification(data, "Promotion", "bi-ticket-perforated-fill", "bg-warning text-dark");
-                });
+                // Reset class của Toast
+                toastEl.className =
+                    'toast align-items-center text-white border-0 shadow-lg ' +
+                    toastBg;
 
-                connection.on("ReceiveFeedbackNotification", function (data) {
-                    handleIncomingNotification(data, "Feedback", "bi-chat-heart-fill", "bg-primary");
-                });
 
-                connection.start().then(function () {
-                    console.log("SignalR Real-time NotificationHub connected successfully!");
-                }).catch(function (err) {
-                    console.warn("SignalR Connection Warning: ", err);
-                });
+                // Create Bootstrap Toast
+                const bsToast =
+                    bootstrap.Toast.getOrCreateInstance(
+                        toastEl,
+                        {
+                            delay: 5000
+                        }
+                    );
+
+
+                // Show Toast
+                bsToast.show();
             }
-        });
-    </script>
+
+
+            // =================================================
+            // 3.2 UPDATE NOTIFICATION BADGE
+            // =================================================
+
+            const badge =
+                document.getElementById('notifBadge');
+
+
+            if (badge) {
+
+                let currentCount =
+                    parseInt(
+                        badge.textContent
+                    ) || 0;
+
+
+                currentCount++;
+
+
+                badge.textContent =
+                    currentCount;
+
+
+                // Hiện badge nếu đang bị ẩn
+                badge.classList.remove(
+                    'd-none'
+                );
+            }
+
+
+            // =================================================
+            // 3.3 SAVE NOTIFICATION HISTORY
+            // =================================================
+
+            try {
+
+                const storageKey =
+                    'cloneEbay_notifications';
+
+
+                let history =
+                    JSON.parse(
+                        localStorage.getItem(
+                            storageKey
+                        ) || '[]'
+                    );
+
+
+                // Nếu dữ liệu LocalStorage bị lỗi
+                if (!Array.isArray(history)) {
+                    history = [];
+                }
+
+
+                // Tạo notification mới
+                const notification = {
+
+                    id:
+                        data?.id ||
+                        Date.now(),
+
+                    type:
+                        type,
+
+                    message:
+                        data?.message || '',
+
+                    time:
+                        new Date()
+                            .toLocaleTimeString(
+                                'vi-VN',
+                                {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                }
+                            ),
+
+                    createdAt:
+                        new Date().toISOString(),
+
+                    isRead:
+                        false
+                };
+
+
+                // Thêm notification mới vào đầu
+                history.unshift(
+                    notification
+                );
+
+
+                // =================================================
+                // 3.4 LIMIT NOTIFICATIONS
+                // =================================================
+
+                const MAX_NOTIFICATIONS = 100;
+
+
+                if (
+                    history.length >
+                    MAX_NOTIFICATIONS
+                ) {
+
+                    history =
+                        history.slice(
+                            0,
+                            MAX_NOTIFICATIONS
+                        );
+
+                }
+
+
+                // Save lại LocalStorage
+                localStorage.setItem(
+                    storageKey,
+                    JSON.stringify(history)
+                );
+
+
+                console.log(
+                    "Notification saved.",
+                    notification
+                );
+
+            }
+            catch (error) {
+
+                console.error(
+                    "Lỗi khi lưu notification vào LocalStorage:",
+                    error
+                );
+
+            }
+        }
+
+
+        // =====================================================
+        // 4. ORDER NOTIFICATION
+        // =====================================================
+
+        connection.on(
+            "ReceiveOrderNotification",
+            function (data) {
+
+                console.log(
+                    "ReceiveOrderNotification:",
+                    data
+                );
+
+
+                handleIncomingNotification(
+                    data,
+                    "Order",
+                    "bi-box-seam-fill",
+                    "bg-success"
+                );
+
+            }
+        );
+
+
+        // =====================================================
+        // 5. PROMOTION NOTIFICATION
+        // =====================================================
+
+        connection.on(
+            "ReceivePromotionNotification",
+            function (data) {
+
+                console.log(
+                    "ReceivePromotionNotification:",
+                    data
+                );
+
+
+                handleIncomingNotification(
+                    data,
+                    "Promotion",
+                    "bi-ticket-perforated-fill",
+                    "bg-warning"
+                );
+
+            }
+        );
+
+
+        // =====================================================
+        // 6. FEEDBACK NOTIFICATION
+        // =====================================================
+
+        connection.on(
+            "ReceiveFeedbackNotification",
+            function (data) {
+
+                console.log(
+                    "ReceiveFeedbackNotification:",
+                    data
+                );
+
+
+                handleIncomingNotification(
+                    data,
+                    "Feedback",
+                    "bi-chat-heart-fill",
+                    "bg-primary"
+                );
+
+            }
+        );
+
+
+        // =====================================================
+        // 7. SIGNALR RECONNECTING
+        // =====================================================
+
+        connection.onreconnecting(
+            function (error) {
+
+                console.warn(
+                    "⚠ SignalR đang reconnect...",
+                    error
+                );
+
+            }
+        );
+
+
+        // =====================================================
+        // 8. SIGNALR RECONNECTED
+        // =====================================================
+
+        connection.onreconnected(
+            function (connectionId) {
+
+                console.log(
+                    "✅ SignalR đã reconnect."
+                );
+
+                console.log(
+                    "Connection ID:",
+                    connectionId
+                );
+
+            }
+        );
+
+
+        // =====================================================
+        // 9. SIGNALR CLOSED
+        // =====================================================
+
+        connection.onclose(
+            function (error) {
+
+                console.warn(
+                    "❌ SignalR connection đã đóng.",
+                    error
+                );
+
+            }
+        );
+
+
+        // =====================================================
+        // 10. START CONNECTION
+        // =====================================================
+
+        async function startSignalR() {
+
+            // Tránh start nhiều lần
+            if (
+                connection.state !==
+                signalR.HubConnectionState.Disconnected
+            ) {
+
+                console.log(
+                    "SignalR đang chạy hoặc đang kết nối."
+                );
+
+                return;
+            }
+
+
+            try {
+
+                console.log(
+                    "Đang kết nối SignalR..."
+                );
+
+
+                await connection.start();
+
+
+                console.log(
+                    "=========================================="
+                );
+
+                console.log(
+                    "✅ SignalR NotificationHub connected!"
+                );
+
+                console.log(
+                    "Connection ID:",
+                    connection.connectionId
+                );
+
+                console.log(
+                    "=========================================="
+                );
+
+            }
+            catch (error) {
+
+                console.error(
+                    "❌ SignalR Connection Error:",
+                    error
+                );
+
+            }
+
+        }
+
+
+        // Start SignalR
+        startSignalR();
+
+
+        // =====================================================
+        // 11. CLEANUP WHEN PAGE CLOSES / RELOADS
+        // =====================================================
+
+        window.addEventListener(
+            'beforeunload',
+            function () {
+
+                if (
+                    connection.state !==
+                    signalR.HubConnectionState.Disconnected
+                ) {
+
+                    connection.stop()
+                        .then(function () {
+
+                            console.log(
+                                "SignalR stopped."
+                            );
+
+                        })
+                        .catch(function (error) {
+
+                            console.warn(
+                                "Lỗi khi stop SignalR:",
+                                error
+                            );
+
+                        });
+
+                }
+
+            }
+        );
+
+
+        // =====================================================
+        // 12. EXPOSE CONNECTION FOR DEBUGGING
+        // =====================================================
+
+        window.notificationHubConnection =
+            connection;
+
+    });
+</script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

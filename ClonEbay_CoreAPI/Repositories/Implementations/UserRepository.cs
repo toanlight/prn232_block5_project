@@ -49,6 +49,27 @@ namespace ClonEbay_CoreAPI.Repositories.Implementations
                 .FirstOrDefaultAsync(u => u.Id == userId);
         }
 
+        public async Task<List<OrderTable>> GetUserOrdersAsync(int userId)
+        {
+            return await _context.OrderTables
+                .AsNoTracking()
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Product)
+                .Include(o => o.ReturnRequests)
+                .Where(o => o.BuyerId == userId)
+                .OrderByDescending(o => o.OrderDate ?? DateTime.MinValue)
+                .ToListAsync();
+        }
+
+        public async Task<List<int>> GetUserReviewedProductIdsAsync(int userId)
+        {
+            return await _context.Reviews
+                .AsNoTracking()
+                .Where(r => r.ReviewerId == userId && r.ProductId.HasValue)
+                .Select(r => r.ProductId!.Value)
+                .ToListAsync();
+        }
+
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();

@@ -1,6 +1,7 @@
 using BCrypt.Net;
 using ClonEbay_CoreAPI.Common.Models;
 using ClonEbay_CoreAPI.DTOs.Address;
+using ClonEbay_CoreAPI.DTOs.Order;
 using ClonEbay_CoreAPI.DTOs.User;
 using ClonEbay_CoreAPI.Exceptions;
 using ClonEbay_CoreAPI.Repositories.Interfaces;
@@ -108,6 +109,33 @@ namespace ClonEbay_CoreAPI.Services.Implementations
             await _userRepository.SaveChangesAsync();
 
             return ApiResponse<bool>.Ok(true, "Đổi mật khẩu thành công!");
+        }
+
+        public async Task<ApiResponse<List<OrderDto>>> GetUserOrdersAsync(int userId)
+        {
+            var orders = await _userRepository.GetUserOrdersAsync(userId);
+            var userReviews = await _userRepository.GetUserReviewedProductIdsAsync(userId);
+
+            var result = orders.Select(o => new OrderDto
+            {
+                Id = o.Id,
+                OrderDate = o.OrderDate,
+                TotalPrice = o.TotalPrice ?? 0,
+                Status = o.Status ?? "Pending",
+                HasPendingReturnRequest = o.ReturnRequests.Any(r => r.Status == "Pending"),
+                Items = o.OrderItems.Select(oi => new OrderItemDto
+                {
+                    Id = oi.Id,
+                    ProductId = oi.ProductId ?? 0,
+                    ProductTitle = oi.Product?.Title ?? "Sản phẩm",
+                    ImageUrl = oi.Product?.Images,
+                    Quantity = oi.Quantity ?? 1,
+                    UnitPrice = oi.UnitPrice ?? 0,
+                    HasReviewed = userReviews.Contains(oi.ProductId ?? 0)
+                }).ToList()
+            }).ToList();
+
+            return ApiResponse<List<OrderDto>>.Ok(result);
         }
     }
 }

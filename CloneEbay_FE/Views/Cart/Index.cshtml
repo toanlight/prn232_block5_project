@@ -51,70 +51,110 @@
                 @foreach (var item in Model.Items)
                 {
                     <div class="card border-0 shadow-sm mb-3">
-                        <div class="card-body d-flex gap-3 align-items-center">
+                        <div class="card-body">
+                            <div class="d-flex gap-3 align-items-center">
 
-                            @* Ảnh sản phẩm *@
-                            <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductId"
-                               class="flex-shrink-0">
-                                @if (!string.IsNullOrEmpty(item.ImageUrl))
-                                {
-                                    <img src="@item.ImageUrl"
-                                         class="rounded-2 object-fit-cover"
-                                         style="width:72px;height:72px"
-                                         alt="@item.Title"
-                                         onerror="this.src=''" />
-                                }
-                                else
-                                {
-                                    <div class="rounded-2 bg-light d-flex align-items-center justify-content-center"
-                                         style="width:72px;height:72px">
-                                        <i class="bi bi-image text-muted fs-3"></i>
-                                    </div>
-                                }
-                            </a>
-
-                            @* Thông tin *@
-                            <div class="flex-grow-1 min-width-0">
-                                <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductId"
-                                   class="fw-semibold text-decoration-none text-dark d-block text-truncate">
-                                    @item.Title
+                                @* Ảnh sản phẩm *@
+                                <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductId" class="flex-shrink-0">
+                                    @if (!string.IsNullOrEmpty(item.ImageUrl))
+                                    {
+                                        <img src="@item.ImageUrl" class="rounded-2 object-fit-cover" style="width:72px;height:72px" alt="@item.Title" onerror="this.src=''" />
+                                    }
+                                    else
+                                    {
+                                        <div class="rounded-2 bg-light d-flex align-items-center justify-content-center" style="width:72px;height:72px">
+                                            <i class="bi bi-image text-muted fs-3"></i>
+                                        </div>
+                                    }
                                 </a>
-                                <div class="text-danger fw-semibold mt-1">@item.UnitPrice.ToString("N0") ₫</div>
-                                <div class="text-muted small">
-                                    Thành tiền: <strong>@item.LineTotal.ToString("N0") ₫</strong>
+
+                                @* Thông tin *@
+                                <div class="flex-grow-1 min-width-0">
+                                    <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductId" class="fw-semibold text-decoration-none text-dark d-block text-truncate">
+                                        @item.Title
+                                    </a>
+                                    <div class="text-danger fw-semibold mt-1">@item.UnitPrice.ToString("N0") ₫</div>
+                                    <div class="text-muted small">
+                                        Tạm tính: <strong>@item.LineTotal.ToString("N0") ₫</strong>
+                                    </div>
                                 </div>
+
+                                @* Cập nhật số lượng *@
+                                <form asp-action="Update" method="post" class="d-flex gap-1 align-items-center">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="productId" value="@item.ProductId" />
+                                    <div class="input-group" style="width: 120px">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary qty-minus">
+                                            <i class="bi bi-dash"></i>
+                                        </button>
+                                        <input name="quantity" type="number" min="1" max="99" value="@item.Quantity" class="form-control form-control-sm text-center qty-input" />
+                                        <button type="button" class="btn btn-sm btn-outline-secondary qty-plus">
+                                            <i class="bi bi-plus"></i>
+                                        </button>
+                                    </div>
+                                    <button type="submit" class="btn btn-sm btn-outline-primary" title="Cập nhật">
+                                        <i class="bi bi-check"></i>
+                                    </button>
+                                </form>
+
+                                @* Xóa khỏi giỏ *@
+                                <form asp-action="Remove" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="productId" value="@item.ProductId" />
+                                    <button class="btn btn-sm btn-outline-danger" title="Xóa" onclick="return confirm('Xóa sản phẩm này khỏi giỏ hàng?')">
+                                        <i class="bi bi-trash3"></i>
+                                    </button>
+                                </form>
                             </div>
 
-                            @* Cập nhật số lượng *@
-                            <form asp-action="Update" method="post" class="d-flex gap-1 align-items-center">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="productId" value="@item.ProductId" />
-                                <div class="input-group" style="width: 120px">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary qty-minus">
-                                        <i class="bi bi-dash"></i>
-                                    </button>
-                                    <input name="quantity" type="number" min="1" max="99"
-                                           value="@item.Quantity"
-                                           class="form-control form-control-sm text-center qty-input" />
-                                    <button type="button" class="btn btn-sm btn-outline-secondary qty-plus">
-                                        <i class="bi bi-plus"></i>
-                                    </button>
+                            <!-- Section áp dụng Coupon cho từng sản phẩm -->
+                            <div class="mt-3 pt-2 border-top d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="small fw-semibold text-secondary">
+                                        <i class="bi bi-ticket-perforated text-primary me-1"></i>Mã giảm giá sản phẩm:
+                                    </span>
+                                    
+                                    @if (!string.IsNullOrEmpty(item.AppliedCouponCode))
+                                    {
+                                        <div class="d-flex align-items-center bg-success bg-opacity-10 border border-success rounded px-2 py-1">
+                                            <span class="badge bg-success me-1">@item.AppliedCouponCode</span>
+                                            <span class="small text-success fw-semibold me-2">-@item.DiscountAmount.ToString("N0") ₫</span>
+                                            <form asp-action="RemoveCoupon" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="productId" value="@item.ProductId" />
+                                                <button type="submit" class="btn btn-sm btn-link text-danger p-0 border-0" title="Bỏ mã">
+                                                    <i class="bi bi-x-circle-fill"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <form asp-action="ApplyCoupon" method="post" class="d-flex gap-1">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="productId" value="@item.ProductId" />
+                                            <input type="text" name="code" class="form-control form-control-sm" style="width: 140px;" placeholder="Nhập mã coupon" id="couponInput_@item.ProductId" />
+                                            <button type="submit" class="btn btn-sm btn-outline-primary">Áp dụng</button>
+                                        </form>
+                                    }
                                 </div>
-                                <button type="submit" class="btn btn-sm btn-outline-primary" title="Cập nhật">
-                                    <i class="bi bi-check"></i>
-                                </button>
-                            </form>
 
-                            @* Xóa khỏi giỏ *@
-                            <form asp-action="Remove" method="post">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="productId" value="@item.ProductId" />
-                                <button class="btn btn-sm btn-outline-danger" title="Xóa"
-                                        onclick="return confirm('Xóa sản phẩm này khỏi giỏ hàng?')">
-                                    <i class="bi bi-trash3"></i>
-                                </button>
-                            </form>
-
+                                @{
+                                    var productCoupons = Model.AvailableCoupons.Where(c => c.ProductId == item.ProductId || c.ProductId == null).ToList();
+                                }
+                                @if (productCoupons.Any() && string.IsNullOrEmpty(item.AppliedCouponCode))
+                                {
+                                    <div class="d-flex align-items-center gap-1">
+                                        <span class="small text-muted me-1">Mã hợp lệ:</span>
+                                        @foreach (var c in productCoupons)
+                                        {
+                                            <button type="button" class="btn btn-xs btn-light border text-primary rounded-pill px-2 py-0 fs-7" onclick="document.getElementById('couponInput_@item.ProductId').value='@c.Code'">
+                                                @c.Code (-@c.DiscountPercent%)
+                                            </button>
+                                        }
+                                    </div>
+                                }
+                            </div>
                         </div>
                     </div>
                 }
@@ -130,10 +170,23 @@
                             <span class="text-muted">Số sản phẩm</span>
                             <span>@Model.ItemCount</span>
                         </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Tổng tiền hàng</span>
+                            <span>@Model.Total.ToString("N0") ₫</span>
+                        </div>
+
+                        @if (Model.TotalDiscount > 0)
+                        {
+                            <div class="d-flex justify-content-between text-success fw-semibold mb-2">
+                                <span>Tổng giảm giá Coupon</span>
+                                <span>-@Model.TotalDiscount.ToString("N0") ₫</span>
+                            </div>
+                        }
+
                         <hr />
                         <div class="d-flex justify-content-between fw-bold fs-5 mb-4">
-                            <span>Tổng cộng</span>
-                            <span class="text-danger">@Model.Total.ToString("N0") ₫</span>
+                            <span>Tổng thanh toán</span>
+                            <span class="text-danger">@Model.FinalTotal.ToString("N0") ₫</span>
                         </div>
 
                         <div class="d-grid">

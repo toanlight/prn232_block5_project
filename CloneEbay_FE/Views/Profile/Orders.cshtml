@@ -1,0 +1,247 @@
+@model List<CloneEbay_FE.Models.OrderViewModel>
+@{
+    ViewData["Title"] = "Lịch sử đơn mua - My eBay";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h3 class="fw-bold mb-1 text-dark">
+            <i class="bi bi-box-seam-fill text-primary me-2"></i>Lịch sử đơn mua của tôi
+        </h3>
+        <p class="text-muted small mb-0">Quản lý, theo dõi hành trình đơn hàng và nhận xét sản phẩm chuẩn eBay</p>
+    </div>
+    <a asp-controller="Products" asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-3">
+        <i class="bi bi-arrow-left me-1"></i> Tiếp tục sắm đồ
+    </a>
+</div>
+
+<!-- eBay Nav Pills Filter Tabs -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body p-2">
+        <ul class="nav nav-pills nav-fill gap-2" id="orderTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active rounded-3 fw-semibold py-2" data-filter="all" type="button">
+                    <i class="bi bi-collection me-1"></i> Tất cả (@Model.Count)
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link rounded-3 fw-semibold py-2" data-filter="Pending,Confirmed" type="button">
+                    <i class="bi bi-clock-history me-1"></i> Chờ xác nhận (@Model.Count(o => o.Status == "Pending" || o.Status == "Confirmed"))
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link rounded-3 fw-semibold py-2" data-filter="Shipping" type="button">
+                    <i class="bi bi-truck me-1"></i> Đang vận chuyển (@Model.Count(o => o.Status == "Shipping"))
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link rounded-3 fw-semibold py-2" data-filter="Delivered" type="button">
+                    <i class="bi bi-check-circle-fill me-1"></i> Đã nhận hàng (@Model.Count(o => o.Status == "Delivered"))
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link rounded-3 fw-semibold py-2" data-filter="Cancelled,Returned" type="button">
+                    <i class="bi bi-x-circle-fill me-1"></i> Đã huỷ / Trả hàng (@Model.Count(o => o.Status == "Cancelled" || o.Status == "Returned"))
+                </button>
+            </li>
+        </ul>
+    </div>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="text-center p-5 bg-white rounded-4 shadow-sm border">
+        <i class="bi bi-inbox fs-1 text-muted d-block mb-3"></i>
+        <h5 class="fw-semibold text-secondary">Bạn chưa có đơn hàng nào</h5>
+        <p class="text-muted small mb-4">Hãy khám phá các sản phẩm tuyệt vời trên hệ thống và đặt mua ngay nhé!</p>
+        <a asp-controller="Products" asp-action="Index" class="btn btn-main px-4 py-2">Khám phá ngay</a>
+    </div>
+}
+else
+{
+    <div class="d-flex flex-column gap-4" id="orderListContainer">
+        @foreach (var order in Model)
+        {
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden order-card-item" data-status="@order.Status">
+                <!-- Header Đơn hàng chuẩn eBay -->
+                <div class="card-header bg-light py-3 px-4 d-flex align-items-center justify-content-between border-bottom flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="badge bg-dark text-white px-3 py-2 rounded-3 fs-7">#ORD-@order.Id</span>
+                        <span class="text-muted small">
+                            <i class="bi bi-calendar3 me-1"></i>@(order.OrderDate?.ToString("dd/MM/yyyy HH:mm") ?? "N/A")
+                        </span>
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary border px-2.5 py-1 rounded-2 fs-7">
+                            <i class="bi bi-credit-card me-1"></i>@(order.PaymentMethod ?? "COD")
+                        </span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        @switch (order.Status)
+                        {
+                            case "Delivered":
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success px-3 py-2 rounded-pill">
+                                    <i class="bi bi-check-circle-fill me-1"></i>Đã giao hàng thành công
+                                </span>
+                                break;
+                            case "Shipping":
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary px-3 py-2 rounded-pill">
+                                    <i class="bi bi-truck me-1"></i>Đang giao hàng
+                                </span>
+                                break;
+                            case "Cancelled":
+                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-3 py-2 rounded-pill">
+                                    <i class="bi bi-x-circle-fill me-1"></i>Đã huỷ đơn hàng
+                                </span>
+                                break;
+                            default:
+                                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning px-3 py-2 rounded-pill">
+                                    <i class="bi bi-clock-history me-1"></i>@order.Status
+                                </span>
+                                break;
+                        }
+                    </div>
+                </div>
+
+                <!-- Thông tin Vận chuyển dự kiến chuẩn eBay -->
+                <div class="bg-primary bg-opacity-10 px-4 py-2 border-bottom d-flex align-items-center justify-content-between small text-primary">
+                    <div>
+                        <i class="bi bi-truck me-1 fw-bold"></i>
+                        <span>Đơn vị vận chuyển: <strong>@(order.ShippingCarrier ?? "Standard Shipping")</strong></span>
+                        <span class="mx-2">•</span>
+                        <span>Trạng thái: <strong>@(order.ShippingStatus ?? "Đang chuẩn bị hàng")</strong></span>
+                    </div>
+                    <div>
+                        <i class="bi bi-calendar-event me-1"></i>Dự kiến giao: 
+                        <strong>@(order.EstimatedArrival?.ToString("dd/MM/yyyy") ?? "3-5 ngày")</strong>
+                    </div>
+                </div>
+
+                <!-- Danh sách sản phẩm trong đơn -->
+                <div class="card-body p-4">
+                    <div class="d-flex flex-column gap-3">
+                        @foreach (var item in order.Items)
+                        {
+                            <div class="d-flex align-items-center gap-3 pb-3 @(item != order.Items.Last() ? "border-bottom" : "")">
+                                @if (!string.IsNullOrEmpty(item.ImageUrl))
+                                {
+                                    <img src="@item.ImageUrl" class="rounded-3 object-fit-cover flex-shrink-0 border" style="width: 72px; height: 72px;" alt="@item.ProductTitle" onerror="this.src=''" />
+                                }
+                                else
+                                {
+                                    <div class="rounded-3 bg-light d-flex align-items-center justify-content-center flex-shrink-0 border" style="width: 72px; height: 72px;">
+                                        <i class="bi bi-image text-muted fs-3"></i>
+                                    </div>
+                                }
+
+                                <div class="flex-grow-1 min-width-0">
+                                    <!-- Seller Shop Tag -->
+                                    <div class="mb-1">
+                                        <span class="badge bg-light text-dark border fs-7 fw-normal">
+                                            <i class="bi bi-shop me-1 text-primary"></i>Seller: <strong>@(item.SellerName ?? "eBay Store")</strong>
+                                        </span>
+                                    </div>
+
+                                    <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductId" class="fw-bold text-dark text-decoration-none text-truncate d-block fs-6">
+                                        @item.ProductTitle
+                                    </a>
+                                    <div class="text-muted small mt-1">
+                                        Số lượng: <strong>x@item.Quantity</strong> | Đơn giá: <strong>@item.UnitPrice.ToString("N0") ₫</strong>
+                                    </div>
+                                </div>
+
+                                <div class="text-end flex-shrink-0 d-flex flex-column align-items-end gap-2">
+                                    <div class="fw-bold fs-6 text-dark">@item.LineTotal.ToString("N0") ₫</div>
+                                    
+                                    <div class="d-flex gap-2 align-items-center">
+                                        <!-- Nút Mua Lại (Buy Again) -->
+                                        <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductId" class="btn btn-sm btn-outline-secondary rounded-pill px-3 fs-7">
+                                            <i class="bi bi-arrow-repeat me-1"></i>Mua lại
+                                        </a>
+
+                                        <!-- Nút Viết Đánh Giá cho sản phẩm đã nhận -->
+                                        @if (order.Status == "Delivered")
+                                        {
+                                            if (item.HasReviewed)
+                                            {
+                                                <span class="badge bg-success bg-opacity-10 text-success border border-success px-3 py-1.5 rounded-pill fs-7">
+                                                    <i class="bi bi-star-fill text-warning me-1"></i>Đã đánh giá
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <a asp-controller="Review" asp-action="Create" asp-route-productId="@item.ProductId" class="btn btn-sm btn-warning rounded-pill px-3 fw-bold fs-7 shadow-sm">
+                                                    <i class="bi bi-star-fill me-1"></i>Viết đánh giá
+                                                </a>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Footer Đơn hàng: Tổng tiền & Action trả hàng / xác nhận nhận hàng -->
+                <div class="card-footer bg-white py-3 px-4 d-flex align-items-center justify-content-between border-top">
+                    <div class="d-flex align-items-center gap-2">
+                        @if (order.Status != "Delivered" && order.Status != "Cancelled" && order.Status != "Returned")
+                        {
+                            <form asp-controller="Profile" asp-action="ConfirmReceipt" method="post" class="d-inline">
+                                <input type="hidden" name="orderId" value="@order.Id" />
+                                <button type="submit" class="btn btn-sm btn-success text-white rounded-pill px-3 shadow-sm fw-bold" onclick="return confirm('Bạn xác nhận đã nhận được đầy đủ hàng từ đơn hàng #ORD-@order.Id?');">
+                                    <i class="bi bi-box-seam-check me-1"></i>Đã nhận được hàng
+                                </button>
+                            </form>
+                        }
+                        @if (order.Status == "Delivered")
+                        {
+                            if (order.HasPendingReturnRequest)
+                            {
+                                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning px-3 py-2 rounded-pill">
+                                    <i class="bi bi-arrow-return-left me-1"></i>Yêu cầu hoàn trả đang chờ xử lý
+                                </span>
+                            }
+                            else
+                            {
+                                <a asp-controller="ReturnRequest" asp-action="Create" asp-route-orderId="@order.Id" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                                    <i class="bi bi-arrow-return-left me-1"></i>Yêu cầu hoàn trả / Hoàn tiền
+                                </a>
+                            }
+                        }
+                    </div>
+                    <div class="text-end">
+                        <span class="text-muted me-2 small">Tổng thanh toán:</span>
+                        <span class="fw-bold fs-4 text-danger">@order.TotalPrice.ToString("N0") ₫</span>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const tabs = document.querySelectorAll('#orderTabs button');
+            const cards = document.querySelectorAll('.order-card-item');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function () {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+
+                    const filter = this.getAttribute('data-filter');
+                    const filterList = filter === 'all' ? [] : filter.split(',');
+
+                    cards.forEach(card => {
+                        const status = card.getAttribute('data-status');
+                        if (filter === 'all' || filterList.includes(status)) {
+                            card.style.display = 'flex';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                });
+            });
+        });
+    </script>
+}

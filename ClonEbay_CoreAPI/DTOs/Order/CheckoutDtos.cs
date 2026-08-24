@@ -25,7 +25,8 @@ public sealed class CheckoutDto
     public int ItemCount => Items.Sum(item => item.Quantity);
     public decimal Subtotal => Items.Sum(item => item.LineTotal);
     public decimal ShippingFee { get; init; }
-    public decimal Total => Subtotal + ShippingFee;
+    public decimal TotalDiscount { get; init; }
+    public decimal Total => Math.Max(0, Subtotal + ShippingFee - TotalDiscount);
 }
 
 public sealed class PlaceOrderRequestDto
@@ -36,6 +37,8 @@ public sealed class PlaceOrderRequestDto
     [Required]
     [RegularExpression("^(COD|PayPal)$", ErrorMessage = "Phương thức thanh toán không hợp lệ.")]
     public string PaymentMethod { get; init; } = "COD";
+
+    public Dictionary<int, string>? AppliedCoupons { get; init; }
 }
 
 public sealed class OrderCreatedDto
@@ -45,6 +48,7 @@ public sealed class OrderCreatedDto
     public int ItemCount { get; init; }
     public decimal Subtotal { get; init; }
     public decimal ShippingFee { get; init; }
+    public decimal TotalDiscount { get; init; }
     public decimal Total { get; init; }
     public string Status { get; init; } = string.Empty;
     public string PaymentMethod { get; init; } = string.Empty;
