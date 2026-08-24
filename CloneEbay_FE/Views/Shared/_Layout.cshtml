@@ -178,6 +178,10 @@
 
                 @if (isLoggedIn)
                 {
+                    <a asp-controller="Orders" asp-action="Index" class="nav-link-custom d-flex align-items-center gap-1">
+                        <i class="bi bi-bag-check text-primary"></i> Đơn hàng
+                    </a>
+
                     <a asp-controller="ReturnRequest" asp-action="Index" class="nav-link-custom d-none d-md-flex align-items-center gap-1">
                         <i class="bi bi-arrow-return-left text-primary"></i> Hoàn trả
                     </a>

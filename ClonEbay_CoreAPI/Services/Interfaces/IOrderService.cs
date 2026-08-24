@@ -7,4 +7,6 @@ public interface IOrderService
 {
     Task<ApiResponse<CheckoutDto>> GetCheckoutAsync(int userId, int? addressId = null);
     Task<ApiResponse<OrderCreatedDto>> PlaceOrderAsync(int userId, PlaceOrderRequestDto request);
+    Task<ApiResponse<List<OrderHistoryItemDto>>> GetMyOrdersAsync(int userId);
+    Task<ApiResponse<OrderHistoryItemDto>> GetOrderDetailAsync(int userId, int orderId);
 }

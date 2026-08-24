@@ -19,6 +19,14 @@ public sealed class OrdersController(IOrderService orderService) : ControllerBas
     public async Task<IActionResult> PlaceOrder(PlaceOrderRequestDto request) =>
         Ok(await orderService.PlaceOrderAsync(UserId(), request));
 
+    [HttpGet("my-orders")]
+    public async Task<IActionResult> GetMyOrders() =>
+        Ok(await orderService.GetMyOrdersAsync(UserId()));
+
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> GetOrderDetail(int id) =>
+        Ok(await orderService.GetOrderDetailAsync(UserId(), id));
+
     private int UserId() => int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id)
         ? id
         : throw new UnauthorizedException();
