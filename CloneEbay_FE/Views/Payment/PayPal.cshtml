@@ -1,0 +1,82 @@
+@model CloneEbay_FE.Models.PayPalPaymentViewModel
+@{
+    ViewData["Title"] = "PayPal Sandbox";
+}
+<partial name="_PaymentMobileStyles" />
+
+<div class="payment-shell mx-auto py-2 py-md-4">
+    <div class="card border-0 shadow-lg overflow-hidden">
+        <div class="paypal-header text-center px-4 py-4">
+            <div class="paypal-logo" aria-label="PayPal">Pay<span>Pal</span></div>
+            <div class="badge rounded-pill text-bg-light mt-2">SANDBOX MÔ PHỎNG</div>
+        </div>
+
+        <div class="card-body p-4 p-md-5">
+            <div class="alert alert-info border-0 small" role="note">
+                <i class="bi bi-info-circle me-1"></i>
+                Đây là cổng thanh toán mô phỏng phục vụ bài tập. Không có tiền thật được giao dịch.
+            </div>
+
+            <h1 class="h4 text-center mb-1">Xác nhận thanh toán</h1>
+            <p class="text-muted text-center mb-4">Đơn hàng <strong>#@Model.OrderId</strong></p>
+
+            <div class="rounded-3 bg-light p-3 p-md-4 mb-4">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Số sản phẩm</span>
+                    <strong>@Model.ItemCount</strong>
+                </div>
+                <div class="d-flex justify-content-between align-items-end border-top pt-3">
+                    <span class="fw-semibold">Tổng thanh toán</span>
+                    <strong class="fs-4 text-primary">@Model.Amount.ToString("N0") ₫</strong>
+                </div>
+            </div>
+
+            <form asp-action="Complete" method="post" id="paypal-form">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="orderId" value="@Model.OrderId" />
+                <input type="hidden" name="succeeded" id="payment-succeeded" value="true" />
+
+                <button type="submit" class="btn btn-paypal w-100 py-3 fw-semibold mb-3" data-payment-result="true">
+                    <i class="bi bi-paypal me-1"></i> Thanh toán mô phỏng
+                </button>
+                <button type="submit" class="btn btn-outline-danger w-100 py-2" data-payment-result="false">
+                    Mô phỏng thất bại / Huỷ
+                </button>
+            </form>
+
+            <div class="text-center text-muted small mt-4">
+                <i class="bi bi-shield-lock"></i> Giao dịch được xác thực bằng tài khoản đang đăng nhập
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const paymentForm = document.getElementById('paypal-form');
+    const paymentResult = document.getElementById('payment-succeeded');
+
+    document.querySelectorAll('[data-payment-result]').forEach(button => {
+        button.addEventListener('click', () => {
+            paymentResult.value = button.dataset.paymentResult;
+        });
+    });
+
+    paymentForm?.addEventListener('submit', () => {
+        paymentForm.querySelectorAll('button').forEach(button => button.disabled = true);
+    });
+</script>
+}
+
+<style>
+    .payment-shell { max-width: 560px; }
+    .paypal-header { background: linear-gradient(135deg, #003087, #0070e0); color: #fff; }
+    .paypal-logo { font-size: 2rem; font-weight: 800; font-style: italic; letter-spacing: -1px; }
+    .paypal-logo span { color: #66b8ff; }
+    .btn-paypal { background: #ffc439; border-color: #ffc439; color: #111; border-radius: .65rem; }
+    .btn-paypal:hover, .btn-paypal:focus { background: #f2ba36; border-color: #f2ba36; color: #111; }
+    @@media (max-width: 575.98px) {
+        .payment-shell { margin: 0 -.25rem; }
+        .payment-shell .card-body { padding: 1.25rem !important; }
+    }
+</style>

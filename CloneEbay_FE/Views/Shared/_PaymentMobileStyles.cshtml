@@ -1,0 +1,32 @@
+<style>
+    @@media (max-width: 575.98px) {
+        .app-header .container {
+            flex-wrap: wrap;
+            justify-content: center !important;
+            gap: .5rem;
+        }
+
+        .app-header .container > .d-flex:last-child {
+            flex: 0 0 100%;
+            max-width: 100%;
+            min-width: 0;
+            overflow-x: auto;
+            justify-content: flex-start;
+            scrollbar-width: none;
+        }
+
+        .app-header .container > .d-flex:last-child::-webkit-scrollbar {
+            display: none;
+        }
+
+        .app-header .nav-link-custom,
+        .app-header .btn {
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .main-container {
+            padding-top: 1rem;
+        }
+    }
+</style>
