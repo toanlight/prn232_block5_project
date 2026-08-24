@@ -195,6 +195,7 @@ public sealed class OrderService(CloneEbayDbContext context) : IOrderService
     {
         var orders = await context.OrderTables
             .AsNoTracking()
+            .AsSplitQuery()
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
                     .ThenInclude(p => p!.Seller)
