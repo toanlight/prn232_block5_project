@@ -27,18 +27,18 @@ namespace ClonEbay_CoreAPI.DTOs.Address
         public string Phone { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Địa chỉ chi tiết không được để trống")]
-        [StringLength(200, ErrorMessage = "Địa chỉ chi tiết tối đa 200 ký tự")]
+        [StringLength(100, ErrorMessage = "Địa chỉ chi tiết tối đa 100 ký tự")]
         public string Street { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Tỉnh/Thành phố không được để trống")]
-        [StringLength(100, ErrorMessage = "Tỉnh/Thành phố tối đa 100 ký tự")]
+        [StringLength(50, ErrorMessage = "Tỉnh/Thành phố tối đa 50 ký tự")]
         public string City { get; set; } = string.Empty;
 
-        [StringLength(100, ErrorMessage = "Quận/Huyện tối đa 100 ký tự")]
+        [StringLength(50, ErrorMessage = "Quận/Huyện tối đa 50 ký tự")]
         public string? State { get; set; }
 
         [Required(ErrorMessage = "Quốc gia không được để trống")]
-        [StringLength(100, ErrorMessage = "Quốc gia tối đa 100 ký tự")]
+        [StringLength(50, ErrorMessage = "Quốc gia tối đa 50 ký tự")]
         public string Country { get; set; } = "Việt Nam";
 
         [StringLength(20, ErrorMessage = "Mã bưu chính tối đa 20 ký tự")]

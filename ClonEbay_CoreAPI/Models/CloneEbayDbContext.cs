@@ -88,11 +88,11 @@ public partial class CloneEbayDbContext : DbContext
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.City)
-                .HasMaxLength(100)
+                .HasMaxLength(50)
                 .IsRequired()
                 .HasColumnName("city");
             entity.Property(e => e.Country)
-                .HasMaxLength(100)
+                .HasMaxLength(50)
                 .IsRequired()
                 .HasColumnName("country");
             entity.Property(e => e.FullName)
@@ -110,10 +110,10 @@ public partial class CloneEbayDbContext : DbContext
                 .HasMaxLength(20)
                 .HasColumnName("postalCode");
             entity.Property(e => e.State)
-                .HasMaxLength(100)
+                .HasMaxLength(50)
                 .HasColumnName("state");
             entity.Property(e => e.Street)
-                .HasMaxLength(200)
+                .HasMaxLength(100)
                 .IsRequired()
                 .HasColumnName("street");
             entity.Property(e => e.UserId)
@@ -239,6 +239,10 @@ public partial class CloneEbayDbContext : DbContext
             entity.HasKey(e => e.Id).HasName("PK__Inventor__3213E83F5BCF5060");
 
             entity.ToTable("Inventory");
+
+            entity.HasIndex(e => e.ProductId, "UX_Inventory_Product")
+                .IsUnique()
+                .HasFilter("[productId] IS NOT NULL");
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.LastUpdated)

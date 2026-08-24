@@ -10,3 +10,51 @@ public sealed class ProductIndexViewModel { public PagedProductViewModel Results
 public sealed class CartItemViewModel { public int ProductId { get; set; } public string Title { get; set; } = string.Empty; public string? ImageUrl { get; set; } public decimal UnitPrice { get; set; } public int Quantity { get; set; } public decimal LineTotal { get; set; } }
 public sealed class CartViewModel { public List<CartItemViewModel> Items { get; set; } = []; public decimal Total { get; set; } public int ItemCount { get; set; } }
 public sealed class AddCartItemViewModel { [Range(1, int.MaxValue)] public int ProductId { get; set; } [Range(1, 99)] public int Quantity { get; set; } = 1; public string Title { get; set; } = string.Empty; public string? ImageUrl { get; set; } public decimal UnitPrice { get; set; } }
+
+public sealed class CheckoutAddressViewModel
+{
+    public int Id { get; set; }
+    public string FullName { get; set; } = string.Empty;
+    public string Phone { get; set; } = string.Empty;
+    public string Street { get; set; } = string.Empty;
+    public string City { get; set; } = string.Empty;
+    public string? State { get; set; }
+    public string Country { get; set; } = string.Empty;
+    public string? PostalCode { get; set; }
+    public bool IsDefault { get; set; }
+    public decimal ShippingFee { get; set; }
+}
+
+public sealed class CheckoutViewModel
+{
+    public List<CartItemViewModel> Items { get; set; } = [];
+    public List<CheckoutAddressViewModel> Addresses { get; set; } = [];
+    public int? SelectedAddressId { get; set; }
+    public int ItemCount { get; set; }
+    public decimal Subtotal { get; set; }
+    public decimal ShippingFee { get; set; }
+    public decimal Total { get; set; }
+}
+
+public sealed class PlaceOrderViewModel
+{
+    [Range(1, int.MaxValue, ErrorMessage = "Vui lòng chọn địa chỉ giao hàng")]
+    public int AddressId { get; set; }
+
+    [Required]
+    [RegularExpression("^(COD|PayPal)$", ErrorMessage = "Phương thức thanh toán không hợp lệ")]
+    public string PaymentMethod { get; set; } = "COD";
+}
+
+public sealed class OrderCreatedViewModel
+{
+    public int OrderId { get; set; }
+    public DateTime OrderDate { get; set; }
+    public int ItemCount { get; set; }
+    public decimal Subtotal { get; set; }
+    public decimal ShippingFee { get; set; }
+    public decimal Total { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string PaymentMethod { get; set; } = string.Empty;
+    public string PaymentStatus { get; set; } = string.Empty;
+}

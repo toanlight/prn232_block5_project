@@ -25,17 +25,8 @@ GO
 
 -- ==================== 1. SCHEMA CSDL GỐC ====================
 
-USE [master]
-GO
-/****** Object:  Database [CloneEbayDB]    Script Date: 8/24/2026 3:07:55 PM ******/
-CREATE DATABASE [CloneEbayDB]
- CONTAINMENT = NONE
- ON  PRIMARY 
-( NAME = N'CloneEbayDB', FILENAME = N'C:\Program Files\Microsoft SQL Server\MSSQL16.SQLEXPRESS\MSSQL\DATA\CloneEbayDB.mdf' , SIZE = 8192KB , MAXSIZE = UNLIMITED, FILEGROWTH = 65536KB )
- LOG ON 
-( NAME = N'CloneEbayDB_log', FILENAME = N'C:\Program Files\Microsoft SQL Server\MSSQL16.SQLEXPRESS\MSSQL\DATA\CloneEbayDB_log.ldf' , SIZE = 8192KB , MAXSIZE = 2048GB , FILEGROWTH = 65536KB )
- WITH CATALOG_COLLATION = DATABASE_DEFAULT, LEDGER = OFF
-GO
+-- Database đã được tạo ở trên. Không lặp lại CREATE DATABASE và
+-- không gắn đường dẫn MDF/LDF cứng để script chạy được trên máy khác.
 ALTER DATABASE [CloneEbayDB] SET COMPATIBILITY_LEVEL = 160
 GO
 IF (1 = FULLTEXTSERVICEPROPERTY('IsFullTextInstalled'))
@@ -433,6 +424,10 @@ GO
 ALTER TABLE [dbo].[Address]  WITH CHECK ADD FOREIGN KEY([userId])
 REFERENCES [dbo].[User] ([id])
 GO
+CREATE UNIQUE INDEX [UX_Address_User_Default]
+ON [dbo].[Address] ([userId])
+WHERE [isDefault] = 1 AND [userId] IS NOT NULL
+GO
 ALTER TABLE [dbo].[Bid]  WITH CHECK ADD FOREIGN KEY([bidderId])
 REFERENCES [dbo].[User] ([id])
 GO
@@ -453,6 +448,10 @@ REFERENCES [dbo].[User] ([id])
 GO
 ALTER TABLE [dbo].[Inventory]  WITH CHECK ADD FOREIGN KEY([productId])
 REFERENCES [dbo].[Product] ([id])
+GO
+CREATE UNIQUE INDEX [UX_Inventory_Product]
+ON [dbo].[Inventory] ([productId])
+WHERE [productId] IS NOT NULL
 GO
 ALTER TABLE [dbo].[Message]  WITH CHECK ADD FOREIGN KEY([receiverId])
 REFERENCES [dbo].[User] ([id])
@@ -670,6 +669,12 @@ INSERT INTO [dbo].[Product] ([title], [description], [price], [images], [categor
  3490000,
  'https://images.unsplash.com/photo-1517668808822-9ebe02f2a6e8?w=600',
  @CatHome, @SellerTechId, 0, NULL);
+GO
+
+-- Mỗi sản phẩm có một bản ghi tồn kho để checkout có thể kiểm tra và trừ kho.
+INSERT INTO [dbo].[Inventory] ([productId], [quantity], [lastUpdated])
+SELECT [id], 100, GETUTCDATE()
+FROM [dbo].[Product];
 GO
 
 -- 5. THÊM ĐÁNH GIÁ MẪU (REVIEWS)
