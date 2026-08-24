@@ -1,0 +1,192 @@
+@model CloneEbay_FE.Models.OrderDetailViewModel
+@{
+    ViewData["Title"] = $"Đơn hàng #{Model.OrderId}";
+}
+@functions {
+    private static string BadgeClass(string statusKey) => statusKey switch
+    {
+        "confirmed" => "order-badge-confirmed",
+        "shipping" => "order-badge-shipping",
+        "delivered" => "order-badge-delivered",
+        "cancelled" => "order-badge-cancelled",
+        _ => "order-badge-pending"
+    };
+
+    private static string PaymentStatusLabel(string? status)
+    {
+        var normalized = Normalize(status);
+        return normalized switch
+        {
+            "PAID" => "Đã thanh toán",
+            "FAILED" => "Thất bại",
+            "REFUNDED" => "Đã hoàn tiền",
+            _ => "Chờ thanh toán"
+        };
+    }
+
+    private static string ShippingStatusLabel(string? status)
+    {
+        var normalized = Normalize(status);
+        return normalized switch
+        {
+            "DELIVERED" or "COMPLETED" => "Đã giao",
+            "INTRANSIT" or "SHIPPING" or "SHIPPED" or "DELIVERING" => "Đang giao",
+            "CANCELLED" or "CANCELED" or "FAILED" => "Đã huỷ",
+            _ => "Đang chuẩn bị"
+        };
+    }
+
+    private static string Normalize(string? value) => string.IsNullOrWhiteSpace(value)
+        ? string.Empty
+        : value.Replace("_", string.Empty).Replace("-", string.Empty).Replace(" ", string.Empty).ToUpperInvariant();
+}
+
+<link rel="stylesheet" href="~/css/orders.css" asp-append-version="true" />
+
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div class="d-flex align-items-center gap-3">
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm" aria-label="Quay lại danh sách đơn hàng"><i class="bi bi-arrow-left"></i></a>
+        <div>
+            <h1 class="h3 mb-1">Đơn hàng #@Model.OrderId</h1>
+            <p class="text-muted mb-0">Đặt lúc @(Model.OrderDate?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "không xác định")</p>
+        </div>
+    </div>
+    <span class="order-status-badge @BadgeClass(Model.StatusKey)">@Model.StatusLabel</span>
+</div>
+
+<section class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-3 p-md-4">
+        <h2 class="h5 mb-4"><i class="bi bi-truck text-primary me-1"></i> Tiến trình đơn hàng</h2>
+        <div class="order-timeline">
+            @foreach (var step in Model.Timeline)
+            {
+                var stepClass = step.IsCancelled ? "cancelled" : step.IsCurrent ? "current" : step.IsCompleted ? "completed" : "upcoming";
+                <div class="order-timeline-step @stepClass">
+                    <div class="order-timeline-marker">
+                        <i class="bi @(step.IsCancelled ? "bi-x-lg" : step.IsCompleted ? "bi-check-lg" : step.IsCurrent ? "bi-circle-fill" : "bi-circle")"></i>
+                    </div>
+                    <div class="order-timeline-content">
+                        <div class="fw-semibold">@step.Label</div>
+                        <div class="small text-muted">@step.Description</div>
+                        @if (step.Timestamp.HasValue)
+                        {
+                            <time class="small text-muted">@step.Timestamp.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</time>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<div class="row g-4 align-items-start">
+    <div class="col-lg-8">
+        <section class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-3 p-md-4">
+                <h2 class="h5 mb-3">Sản phẩm (@Model.ItemCount)</h2>
+                @foreach (var item in Model.Items)
+                {
+                    <div class="order-detail-product d-flex gap-3 align-items-center py-3 border-top">
+                        @if (!string.IsNullOrWhiteSpace(item.ImageUrl))
+                        {
+                            <img src="@item.ImageUrl" alt="@item.Title" class="order-product-image order-product-image-lg" />
+                        }
+                        else
+                        {
+                            <div class="order-product-image order-product-image-lg order-image-placeholder"><i class="bi bi-image"></i></div>
+                        }
+                        <div class="flex-grow-1 min-width-0">
+                            @if (item.ProductId > 0)
+                            {
+                                <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductId" class="order-product-title">@item.Title</a>
+                            }
+                            else
+                            {
+                                <span class="order-product-title">@item.Title</span>
+                            }
+                            <div class="small text-muted mt-1">@item.UnitPrice.ToString("N0") ₫ × @item.Quantity</div>
+                            @if (Model.CanReview && item.ProductId > 0)
+                            {
+                                <a asp-controller="Review" asp-action="Create" asp-route-productId="@item.ProductId" class="small text-decoration-none"><i class="bi bi-star"></i> Đánh giá sản phẩm</a>
+                            }
+                        </div>
+                        <strong class="text-nowrap">@item.LineTotal.ToString("N0") ₫</strong>
+                    </div>
+                }
+            </div>
+        </section>
+
+        <section class="card border-0 shadow-sm">
+            <div class="card-body p-3 p-md-4">
+                <h2 class="h5 mb-3"><i class="bi bi-geo-alt text-primary me-1"></i> Địa chỉ nhận hàng</h2>
+                @if (Model.Address is null)
+                {
+                    <p class="text-muted mb-0">Đơn hàng cũ không còn thông tin địa chỉ.</p>
+                }
+                else
+                {
+                    <div class="fw-semibold">@Model.Address.FullName <span class="text-muted fw-normal ms-2">@Model.Address.Phone</span></div>
+                    <div class="text-muted mt-1">
+                        @Model.Address.Street@if (!string.IsNullOrWhiteSpace(Model.Address.State)) {<text>, @Model.Address.State</text>}, @Model.Address.City, @Model.Address.Country
+                        @if (!string.IsNullOrWhiteSpace(Model.Address.PostalCode)) {<text> (@Model.Address.PostalCode)</text>}
+                    </div>
+                }
+            </div>
+        </section>
+    </div>
+
+    <div class="col-lg-4">
+        <aside class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-3 p-md-4">
+                <h2 class="h5 mb-3">Thanh toán</h2>
+                @if (Model.Payment is null)
+                {
+                    <p class="text-muted small">Chưa có thông tin thanh toán.</p>
+                }
+                else
+                {
+                    <div class="d-flex justify-content-between mb-2"><span class="text-muted">Phương thức</span><strong>@Model.Payment.Method</strong></div>
+                    <div class="d-flex justify-content-between mb-2"><span class="text-muted">Trạng thái</span><strong>@PaymentStatusLabel(Model.Payment.Status)</strong></div>
+                    @if (Model.Payment.PaidAt.HasValue)
+                    {
+                        <div class="d-flex justify-content-between small"><span class="text-muted">Thanh toán lúc</span><span>@Model.Payment.PaidAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span></div>
+                    }
+                }
+
+                <hr />
+                <h2 class="h5 mb-3">Vận chuyển</h2>
+                @if (Model.Shipping is null)
+                {
+                    <p class="text-muted small">Chưa có thông tin vận chuyển.</p>
+                }
+                else
+                {
+                    <div class="d-flex justify-content-between mb-2"><span class="text-muted">Đơn vị</span><strong>@(string.IsNullOrWhiteSpace(Model.Shipping.Carrier) ? "Chưa xác định" : Model.Shipping.Carrier)</strong></div>
+                    <div class="d-flex justify-content-between mb-2"><span class="text-muted">Trạng thái</span><strong>@ShippingStatusLabel(Model.Shipping.Status)</strong></div>
+                    @if (!string.IsNullOrWhiteSpace(Model.Shipping.TrackingNumber))
+                    {
+                        <div class="d-flex justify-content-between mb-2"><span class="text-muted">Mã vận đơn</span><span class="font-monospace">@Model.Shipping.TrackingNumber</span></div>
+                    }
+                    @if (Model.Shipping.EstimatedArrival.HasValue && Model.StatusKey != "delivered")
+                    {
+                        <div class="d-flex justify-content-between small"><span class="text-muted">Dự kiến giao</span><span>@Model.Shipping.EstimatedArrival.Value.ToLocalTime().ToString("dd/MM/yyyy")</span></div>
+                    }
+                }
+            </div>
+        </aside>
+
+        <aside class="card border-0 shadow-sm">
+            <div class="card-body p-3 p-md-4">
+                <h2 class="h5 mb-3">Tổng thanh toán</h2>
+                <div class="d-flex justify-content-between mb-2"><span class="text-muted">Tiền sản phẩm</span><span>@Model.Subtotal.ToString("N0") ₫</span></div>
+                <div class="d-flex justify-content-between mb-3"><span class="text-muted">Phí vận chuyển</span><span>@Model.ShippingFee.ToString("N0") ₫</span></div>
+                <hr />
+                <div class="d-flex justify-content-between fs-5"><strong>Tổng cộng</strong><strong class="text-danger">@Model.Total.ToString("N0") ₫</strong></div>
+                @if (Model.CanRequestReturn)
+                {
+                    <a asp-controller="ReturnRequest" asp-action="Create" asp-route-orderId="@Model.OrderId" class="btn btn-outline-secondary w-100 mt-4">Yêu cầu hoàn trả</a>
+                }
+            </div>
+        </aside>
+    </div>
+</div>

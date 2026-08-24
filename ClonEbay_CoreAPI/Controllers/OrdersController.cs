@@ -11,6 +11,17 @@ namespace ClonEbay_CoreAPI.Controllers;
 [Route("api/[controller]")]
 public sealed class OrdersController(IOrderService orderService) : ControllerBase
 {
+    [HttpGet]
+    public async Task<IActionResult> GetHistory(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? status = null) =>
+        Ok(await orderService.GetOrderHistoryAsync(UserId(), page, pageSize, status));
+
+    [HttpGet("{orderId:int}")]
+    public async Task<IActionResult> GetDetail(int orderId) =>
+        Ok(await orderService.GetOrderDetailAsync(UserId(), orderId));
+
     [HttpGet("checkout")]
     public async Task<IActionResult> GetCheckout([FromQuery] int? addressId = null) =>
         Ok(await orderService.GetCheckoutAsync(UserId(), addressId));

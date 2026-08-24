@@ -11,6 +11,73 @@ namespace ClonEbay_CoreAPI.Services.Implementations;
 
 public sealed class OrderService(CloneEbayDbContext context) : IOrderService
 {
+    private enum OrderProgressStage
+    {
+        Pending = 1,
+        Confirmed = 2,
+        Shipping = 3,
+        Delivered = 4,
+        Cancelled = 5
+    }
+
+    public async Task<ApiResponse<OrderHistoryPageDto>> GetOrderHistoryAsync(
+        int userId,
+        int page = 1,
+        int pageSize = 10,
+        string? status = null)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 50);
+        var statusFilter = NormalizeStatusFilter(status);
+
+        var query = context.OrderTables
+            .AsNoTracking()
+            .Where(order => order.BuyerId == userId);
+
+        query = ApplyStatusFilter(query, statusFilter);
+        var totalItems = await query.CountAsync();
+        var orders = await query
+            .OrderByDescending(order => order.OrderDate)
+            .ThenByDescending(order => order.Id)
+            .Include(order => order.OrderItems)
+                .ThenInclude(item => item.Product)
+            .Include(order => order.Payments)
+            .Include(order => order.ShippingInfos)
+            .AsSplitQuery()
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var result = new OrderHistoryPageDto
+        {
+            Items = orders.Select(ToHistoryItem).ToList(),
+            Page = page,
+            PageSize = pageSize,
+            TotalItems = totalItems,
+            TotalPages = totalItems == 0 ? 0 : (int)Math.Ceiling(totalItems / (double)pageSize),
+            StatusFilter = statusFilter
+        };
+
+        return ApiResponse<OrderHistoryPageDto>.Ok(result);
+    }
+
+    public async Task<ApiResponse<OrderDetailDto>> GetOrderDetailAsync(int userId, int orderId)
+    {
+        var order = await context.OrderTables
+            .AsNoTracking()
+            .Where(item => item.Id == orderId && item.BuyerId == userId)
+            .Include(item => item.Address)
+            .Include(item => item.OrderItems)
+                .ThenInclude(item => item.Product)
+            .Include(item => item.Payments)
+            .Include(item => item.ShippingInfos)
+            .AsSplitQuery()
+            .SingleOrDefaultAsync()
+            ?? throw new NotFoundException("Không tìm thấy đơn hàng.");
+
+        return ApiResponse<OrderDetailDto>.Ok(ToOrderDetail(order));
+    }
+
     public async Task<ApiResponse<CheckoutDto>> GetCheckoutAsync(int userId, int? addressId = null)
     {
         var cartItems = await LoadCartAsync(userId, asTracking: false);
@@ -178,6 +245,234 @@ public sealed class OrderService(CloneEbayDbContext context) : IOrderService
             Quantity = item.Quantity
         })
         .ToList();
+
+    private static OrderHistoryItemDto ToHistoryItem(OrderTable order)
+    {
+        var payment = order.Payments.OrderByDescending(item => item.Id).FirstOrDefault();
+        var shipping = order.ShippingInfos.OrderByDescending(item => item.Id).FirstOrDefault();
+        var stage = ResolveStage(order.Status, shipping?.Status);
+
+        return new OrderHistoryItemDto
+        {
+            OrderId = order.Id,
+            OrderDate = order.OrderDate,
+            ItemCount = order.OrderItems.Sum(item => item.Quantity ?? 0),
+            Total = order.TotalPrice ?? 0,
+            Status = order.Status ?? "Pending",
+            StatusKey = StageKey(stage),
+            StatusLabel = StageLabel(stage),
+            PaymentMethod = payment?.Method,
+            PaymentStatus = payment?.Status,
+            ShippingStatus = shipping?.Status,
+            PreviewItems = order.OrderItems
+                .OrderBy(item => item.Id)
+                .Take(3)
+                .Select(item => new OrderHistoryPreviewItemDto
+                {
+                    ProductId = item.ProductId ?? 0,
+                    Title = item.Product?.Title ?? "Sản phẩm không còn tồn tại",
+                    ImageUrl = ProductService.FirstImage(item.Product?.Images),
+                    Quantity = item.Quantity ?? 0
+                })
+                .ToList()
+        };
+    }
+
+    private static OrderDetailDto ToOrderDetail(OrderTable order)
+    {
+        var payment = order.Payments.OrderByDescending(item => item.Id).FirstOrDefault();
+        var shipping = order.ShippingInfos.OrderByDescending(item => item.Id).FirstOrDefault();
+        var stage = ResolveStage(order.Status, shipping?.Status);
+        var subtotal = order.OrderItems.Sum(item => (item.UnitPrice ?? 0) * (item.Quantity ?? 0));
+        var total = order.TotalPrice ?? subtotal;
+
+        return new OrderDetailDto
+        {
+            OrderId = order.Id,
+            OrderDate = order.OrderDate,
+            ItemCount = order.OrderItems.Sum(item => item.Quantity ?? 0),
+            Subtotal = subtotal,
+            ShippingFee = Math.Max(0, total - subtotal),
+            Total = total,
+            Status = order.Status ?? "Pending",
+            StatusKey = StageKey(stage),
+            StatusLabel = StageLabel(stage),
+            CanReview = stage == OrderProgressStage.Delivered,
+            CanRequestReturn = stage == OrderProgressStage.Delivered,
+            Address = order.Address is null ? null : new OrderHistoryAddressDto
+            {
+                FullName = order.Address.FullName ?? string.Empty,
+                Phone = order.Address.Phone ?? string.Empty,
+                Street = order.Address.Street ?? string.Empty,
+                City = order.Address.City ?? string.Empty,
+                State = order.Address.State,
+                Country = order.Address.Country ?? string.Empty,
+                PostalCode = order.Address.PostalCode
+            },
+            Payment = payment is null ? null : new OrderHistoryPaymentDto
+            {
+                Method = payment.Method ?? string.Empty,
+                Status = payment.Status ?? string.Empty,
+                Amount = payment.Amount ?? total,
+                PaidAt = payment.PaidAt
+            },
+            Shipping = shipping is null ? null : new OrderHistoryShippingDto
+            {
+                Carrier = shipping.Carrier ?? string.Empty,
+                TrackingNumber = shipping.TrackingNumber,
+                Status = shipping.Status ?? string.Empty,
+                EstimatedArrival = shipping.EstimatedArrival
+            },
+            Items = order.OrderItems
+                .OrderBy(item => item.Id)
+                .Select(item => new OrderDetailItemDto
+                {
+                    ProductId = item.ProductId ?? 0,
+                    Title = item.Product?.Title ?? "Sản phẩm không còn tồn tại",
+                    ImageUrl = ProductService.FirstImage(item.Product?.Images),
+                    UnitPrice = item.UnitPrice ?? 0,
+                    Quantity = item.Quantity ?? 0
+                })
+                .ToList(),
+            Timeline = BuildTimeline(stage, order.OrderDate, payment?.PaidAt)
+        };
+    }
+
+    private static IReadOnlyList<OrderTimelineStepDto> BuildTimeline(
+        OrderProgressStage stage,
+        DateTime? orderDate,
+        DateTime? paidAt)
+    {
+        if (stage == OrderProgressStage.Cancelled)
+        {
+            return
+            [
+                new OrderTimelineStepDto
+                {
+                    Code = "placed",
+                    Label = "Đã đặt hàng",
+                    Description = "Đơn hàng đã được tạo trên hệ thống.",
+                    Timestamp = orderDate,
+                    IsCompleted = true
+                },
+                new OrderTimelineStepDto
+                {
+                    Code = "cancelled",
+                    Label = "Đã huỷ",
+                    Description = "Đơn hàng đã bị huỷ hoặc thanh toán không thành công.",
+                    IsCurrent = true,
+                    IsCancelled = true
+                }
+            ];
+        }
+
+        var definitions = new[]
+        {
+            (Code: "placed", Label: "Đã đặt hàng", Description: "Đơn hàng đã được tạo trên hệ thống.", Timestamp: orderDate),
+            (Code: "pending", Label: "Chờ xác nhận", Description: "Đơn hàng đang chờ xác nhận.", Timestamp: orderDate),
+            (Code: "confirmed", Label: "Đã xác nhận", Description: "Đơn hàng đã được xác nhận và đang chuẩn bị giao.", Timestamp: paidAt),
+            (Code: "shipping", Label: "Đang giao", Description: "Đơn hàng đang trên đường giao đến bạn.", Timestamp: (DateTime?)null),
+            (Code: "delivered", Label: "Đã giao", Description: "Đơn hàng đã được giao thành công.", Timestamp: (DateTime?)null)
+        };
+        var currentIndex = (int)stage;
+
+        return definitions.Select((item, index) => new OrderTimelineStepDto
+        {
+            Code = item.Code,
+            Label = item.Label,
+            Description = item.Description,
+            Timestamp = item.Timestamp,
+            IsCompleted = index < currentIndex,
+            IsCurrent = index == currentIndex
+        }).ToList();
+    }
+
+    private static IQueryable<OrderTable> ApplyStatusFilter(
+        IQueryable<OrderTable> query,
+        string statusFilter) => statusFilter switch
+        {
+            "pending" => query.Where(order => order.Status == null || order.Status == "Pending"),
+            "confirmed" => query.Where(order => order.Status == "Confirmed" || order.Status == "Processing"),
+            "shipping" => query.Where(order =>
+                order.Status == "Shipped" ||
+                order.Status == "Shipping" ||
+                order.ShippingInfos.Any(info =>
+                    info.Status == "In_Transit" ||
+                    info.Status == "In Transit" ||
+                    info.Status == "Shipping" ||
+                    info.Status == "Shipped")),
+            "delivered" => query.Where(order =>
+                order.Status == "Delivered" ||
+                order.Status == "Completed" ||
+                order.ShippingInfos.Any(info => info.Status == "Delivered")),
+            "cancelled" => query.Where(order =>
+                order.Status == "Cancelled" ||
+                order.Status == "Canceled" ||
+                order.Status == "Failed"),
+            _ => query
+        };
+
+    private static string NormalizeStatusFilter(string? status)
+    {
+        var normalized = status?.Trim().ToLowerInvariant();
+        return normalized is "pending" or "confirmed" or "shipping" or "delivered" or "cancelled"
+            ? normalized
+            : "all";
+    }
+
+    private static OrderProgressStage ResolveStage(string? orderStatus, string? shippingStatus)
+    {
+        var order = NormalizeStatusToken(orderStatus);
+        var shipping = NormalizeStatusToken(shippingStatus);
+
+        if (order is "CANCELLED" or "CANCELED" or "FAILED" || shipping is "CANCELLED" or "CANCELED" or "FAILED")
+        {
+            return OrderProgressStage.Cancelled;
+        }
+
+        if (order is "DELIVERED" or "COMPLETED" || shipping is "DELIVERED" or "COMPLETED")
+        {
+            return OrderProgressStage.Delivered;
+        }
+
+        if (order is "SHIPPED" or "SHIPPING" or "INTRANSIT" || shipping is "SHIPPED" or "SHIPPING" or "INTRANSIT" or "DELIVERING")
+        {
+            return OrderProgressStage.Shipping;
+        }
+
+        if (order is "CONFIRMED" or "PROCESSING")
+        {
+            return OrderProgressStage.Confirmed;
+        }
+
+        return OrderProgressStage.Pending;
+    }
+
+    private static string NormalizeStatusToken(string? status) => string.IsNullOrWhiteSpace(status)
+        ? string.Empty
+        : status.Trim()
+            .Replace("_", string.Empty)
+            .Replace("-", string.Empty)
+            .Replace(" ", string.Empty)
+            .ToUpperInvariant();
+
+    private static string StageKey(OrderProgressStage stage) => stage switch
+    {
+        OrderProgressStage.Confirmed => "confirmed",
+        OrderProgressStage.Shipping => "shipping",
+        OrderProgressStage.Delivered => "delivered",
+        OrderProgressStage.Cancelled => "cancelled",
+        _ => "pending"
+    };
+
+    private static string StageLabel(OrderProgressStage stage) => stage switch
+    {
+        OrderProgressStage.Confirmed => "Đã xác nhận",
+        OrderProgressStage.Shipping => "Đang giao",
+        OrderProgressStage.Delivered => "Đã giao",
+        OrderProgressStage.Cancelled => "Đã huỷ",
+        _ => "Chờ xác nhận"
+    };
 
     private static CheckoutAddressDto ToCheckoutAddress(Address address) => new()
     {

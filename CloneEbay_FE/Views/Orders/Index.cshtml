@@ -1,0 +1,135 @@
+@model CloneEbay_FE.Models.OrderHistoryPageViewModel
+@{
+    ViewData["Title"] = "Đơn hàng của tôi";
+    var filters = new[]
+    {
+        (Key: "all", Label: "Tất cả"),
+        (Key: "pending", Label: "Chờ xác nhận"),
+        (Key: "confirmed", Label: "Đã xác nhận"),
+        (Key: "shipping", Label: "Đang giao"),
+        (Key: "delivered", Label: "Đã giao"),
+        (Key: "cancelled", Label: "Đã huỷ")
+    };
+}
+@functions {
+    private static string BadgeClass(string statusKey) => statusKey switch
+    {
+        "confirmed" => "order-badge-confirmed",
+        "shipping" => "order-badge-shipping",
+        "delivered" => "order-badge-delivered",
+        "cancelled" => "order-badge-cancelled",
+        _ => "order-badge-pending"
+    };
+}
+
+<link rel="stylesheet" href="~/css/orders.css" asp-append-version="true" />
+
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3 mb-4">
+    <div>
+        <h1 class="h3 mb-1">Đơn hàng của tôi</h1>
+        <p class="text-muted mb-0">Theo dõi trạng thái và xem lại các sản phẩm đã mua.</p>
+    </div>
+    <div class="text-muted small">@Model.TotalItems đơn hàng</div>
+</div>
+
+<nav class="order-filter-tabs mb-4" aria-label="Lọc trạng thái đơn hàng">
+    @foreach (var filter in filters)
+    {
+        var active = string.Equals(Model.StatusFilter, filter.Key, StringComparison.OrdinalIgnoreCase)
+            || (filter.Key == "all" && string.IsNullOrWhiteSpace(Model.StatusFilter));
+        <a asp-action="Index" asp-route-status="@(filter.Key == "all" ? null : filter.Key)"
+           class="order-filter-tab @(active ? "active" : null)">@filter.Label</a>
+    }
+</nav>
+
+@if (!Model.Items.Any())
+{
+    <div class="card border-0 shadow-sm text-center py-5">
+        <div class="card-body">
+            <i class="bi bi-box-seam display-5 text-muted"></i>
+            <h2 class="h5 mt-3">Chưa có đơn hàng phù hợp</h2>
+            <p class="text-muted">Các đơn hàng bạn đã mua sẽ xuất hiện tại đây.</p>
+            <a asp-controller="Products" asp-action="Index" class="btn btn-primary">Khám phá sản phẩm</a>
+        </div>
+    </div>
+}
+else
+{
+    <div class="vstack gap-3">
+        @foreach (var order in Model.Items)
+        {
+            <article class="card border-0 shadow-sm order-card">
+                <header class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2 px-3 px-md-4 py-3">
+                    <div>
+                        <strong>Đơn hàng #@order.OrderId</strong>
+                        <span class="text-muted small ms-2">@(order.OrderDate?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "Chưa có ngày đặt")</span>
+                    </div>
+                    <span class="order-status-badge @BadgeClass(order.StatusKey)">@order.StatusLabel</span>
+                </header>
+
+                <div class="card-body px-3 px-md-4">
+                    <div class="vstack gap-3">
+                        @foreach (var item in order.PreviewItems)
+                        {
+                            <div class="d-flex gap-3 align-items-center">
+                                @if (!string.IsNullOrWhiteSpace(item.ImageUrl))
+                                {
+                                    <img src="@item.ImageUrl" alt="@item.Title" class="order-product-image" />
+                                }
+                                else
+                                {
+                                    <div class="order-product-image order-image-placeholder"><i class="bi bi-image"></i></div>
+                                }
+                                <div class="flex-grow-1 min-width-0">
+                                    @if (item.ProductId > 0)
+                                    {
+                                        <a asp-controller="Products" asp-action="Details" asp-route-id="@item.ProductId" class="order-product-title">@item.Title</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="order-product-title">@item.Title</span>
+                                    }
+                                    <div class="text-muted small">Số lượng: @item.Quantity</div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <footer class="card-footer bg-light-subtle border-top px-3 px-md-4 py-3 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
+                    <div class="small text-muted">
+                        <span>@order.ItemCount sản phẩm</span>
+                        @if (!string.IsNullOrWhiteSpace(order.PaymentMethod))
+                        {
+                            <span class="mx-2">•</span><span>@order.PaymentMethod</span>
+                        }
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center justify-content-between justify-content-sm-end gap-3">
+                        <div><span class="text-muted">Tổng tiền: </span><strong class="text-danger fs-5">@order.Total.ToString("N0") ₫</strong></div>
+                        <a asp-action="Details" asp-route-id="@order.OrderId" class="btn btn-outline-primary">Xem chi tiết</a>
+                    </div>
+                </footer>
+            </article>
+        }
+    </div>
+
+    @if (Model.TotalPages > 1)
+    {
+        <nav class="mt-4" aria-label="Phân trang đơn hàng">
+            <ul class="pagination justify-content-center flex-wrap">
+                <li class="page-item @(Model.Page <= 1 ? "disabled" : null)">
+                    <a class="page-link" asp-action="Index" asp-route-page="@(Model.Page - 1)" asp-route-status="@(Model.StatusFilter == "all" ? null : Model.StatusFilter)">Trước</a>
+                </li>
+                @for (var pageNumber = 1; pageNumber <= Model.TotalPages; pageNumber++)
+                {
+                    <li class="page-item @(pageNumber == Model.Page ? "active" : null)">
+                        <a class="page-link" asp-action="Index" asp-route-page="@pageNumber" asp-route-status="@(Model.StatusFilter == "all" ? null : Model.StatusFilter)">@pageNumber</a>
+                    </li>
+                }
+                <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : null)">
+                    <a class="page-link" asp-action="Index" asp-route-page="@(Model.Page + 1)" asp-route-status="@(Model.StatusFilter == "all" ? null : Model.StatusFilter)">Sau</a>
+                </li>
+            </ul>
+        </nav>
+    }
+}
