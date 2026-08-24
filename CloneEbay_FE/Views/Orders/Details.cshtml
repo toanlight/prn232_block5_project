@@ -85,7 +85,7 @@
                                         </div>
                                     </td>
                                     <td class="text-center text-muted">@item.UnitPrice.ToString("N0") ₫</td>
-                                    <td class="text-center fw-semibold">x@item.Quantity</td>
+                                    <td class="text-center fw-semibold">@(item.Quantity)</td>
                                     <td class="text-end fw-bold text-dark">@item.LineTotal.ToString("N0") ₫</td>
                                 </tr>
                             }
