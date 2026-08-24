@@ -93,7 +93,7 @@ namespace ClonEbay_CoreAPI.Controllers
 
         private string GetCurrentUserRole()
         {
-            return User.FindFirst(ClaimTypes.Role)?.Value ?? "User";
+            return User.FindFirst(ClaimTypes.Role)?.Value;
         }
     }
 }
