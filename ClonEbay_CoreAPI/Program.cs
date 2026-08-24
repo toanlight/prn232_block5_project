@@ -49,8 +49,12 @@ try
     builder.Services.AddScoped<IReturnRequestService, ReturnRequestService>();
     builder.Services.AddScoped<IReviewService, ReviewService>();
     builder.Services.AddScoped<ICouponService, CouponService>();
+    builder.Services.AddScoped<INotificationService, NotificationService>();
 
-    // 4. Cấu hình JWT Authentication
+    // 4. Đăng ký SignalR Real-time Services
+    builder.Services.AddSignalR();
+
+    // 5. Cấu hình JWT Authentication (hỗ trợ cả HTTP Headers và SignalR WebSocket Query String)
     var jwtSecretKey = builder.Configuration["JwtSettings:SecretKey"] 
         ?? "YourSuperSecretCloneEbayPRN232SecretKeyForJwtAuthenticationWhichIsVeryLongAndSecure!";
     var jwtIssuer = builder.Configuration["JwtSettings:Issuer"] ?? "CloneEbay_CoreAPI";
@@ -76,18 +80,34 @@ try
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
+
+        // Đọc token từ query string `access_token` khi kết nối SignalR WebSockets
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/notification"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
     });
 
     builder.Services.AddAuthorization();
 
-    // 4. Cấu hình CORS
+    // 6. Cấu hình CORS (AllowCredentials cho SignalR)
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("AllowAll", policy =>
         {
-            policy.AllowAnyOrigin()
+            policy.SetIsOriginAllowed(_ => true)
                   .AllowAnyMethod()
-                  .AllowAnyHeader();
+                  .AllowAnyHeader()
+                  .AllowCredentials();
         });
     });
 
@@ -95,14 +115,14 @@ try
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
 
-    // 5. Cấu hình Swagger với JWT Bearer Authorization
+    // 7. Cấu hình Swagger với JWT Bearer Authorization
     builder.Services.AddSwaggerGen(c =>
     {
         c.SwaggerDoc("v1", new OpenApiInfo
         {
             Title = "CloneEbay Core API",
             Version = "v1",
-            Description = "API hệ thống E-Commerce CloneEbay (Auth, JWT, Products, Orders,...)"
+            Description = "API hệ thống E-Commerce CloneEbay (Auth, JWT, Products, Orders, SignalR Notifications,...)"
         });
 
         c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -152,6 +172,7 @@ try
     app.UseAuthorization();
 
     app.MapControllers();
+    app.MapHub<ClonEbay_CoreAPI.Hubs.NotificationHub>("/hubs/notification");
 
     app.Run();
 }
