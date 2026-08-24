@@ -54,3 +54,30 @@ public sealed class OrderCreatedDto
     public string PaymentMethod { get; init; } = string.Empty;
     public string PaymentStatus { get; init; } = string.Empty;
 }
+
+public sealed class OrderHistoryItemDto
+{
+    public int OrderId { get; init; }
+    public DateTime OrderDate { get; init; }
+    public decimal TotalPrice { get; init; }
+    public string Status { get; init; } = string.Empty;
+    public string? AddressText { get; init; }
+    public string? RecipientName { get; init; }
+    public string? RecipientPhone { get; init; }
+    public string? PaymentMethod { get; init; }
+    public string? PaymentStatus { get; init; }
+    public int ItemCount { get; init; }
+    public decimal ShippingFee { get; init; }
+    public decimal Subtotal { get; init; }
+    public List<OrderItemDetailDto> Items { get; init; } = [];
+}
+
+public sealed class OrderItemDetailDto
+{
+    public int ProductId { get; init; }
+    public string Title { get; init; } = string.Empty;
+    public string? ImageUrl { get; init; }
+    public int Quantity { get; init; }
+    public decimal UnitPrice { get; init; }
+    public decimal LineTotal => UnitPrice * Quantity;
+}

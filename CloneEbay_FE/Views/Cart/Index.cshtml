@@ -204,17 +204,33 @@
 
 @section Scripts {
 <script>
-    // ── Tăng/giảm số lượng trong giỏ ──
+    // ── Tăng/giảm số lượng trong giỏ (Tự động cập nhật thành tiền) ──
     document.querySelectorAll('.qty-minus').forEach(btn => {
         btn.addEventListener('click', () => {
-            const input = btn.closest('.input-group').querySelector('.qty-input');
-            if (+input.value > 1) input.value = +input.value - 1;
+            const form = btn.closest('form');
+            const input = form.querySelector('.qty-input');
+            if (+input.value > 1) {
+                input.value = +input.value - 1;
+                form.submit();
+            }
         });
     });
     document.querySelectorAll('.qty-plus').forEach(btn => {
         btn.addEventListener('click', () => {
-            const input = btn.closest('.input-group').querySelector('.qty-input');
-            if (+input.value < 99) input.value = +input.value + 1;
+            const form = btn.closest('form');
+            const input = form.querySelector('.qty-input');
+            if (+input.value < 99) {
+                input.value = +input.value + 1;
+                form.submit();
+            }
+        });
+    });
+    document.querySelectorAll('.qty-input').forEach(input => {
+        input.addEventListener('change', () => {
+            const form = input.closest('form');
+            if (+input.value < 1) input.value = 1;
+            if (+input.value > 99) input.value = 99;
+            form.submit();
         });
     });
 

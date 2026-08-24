@@ -92,3 +92,30 @@ public sealed class PayPalPaymentViewModel
     public string OrderStatus { get; set; } = string.Empty;
     public DateTime? PaidAt { get; set; }
 }
+
+public sealed class OrderHistoryItemViewModel
+{
+    public int OrderId { get; set; }
+    public DateTime OrderDate { get; set; }
+    public decimal TotalPrice { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string? AddressText { get; set; }
+    public string? RecipientName { get; set; }
+    public string? RecipientPhone { get; set; }
+    public string? PaymentMethod { get; set; }
+    public string? PaymentStatus { get; set; }
+    public int ItemCount { get; set; }
+    public decimal ShippingFee { get; set; }
+    public decimal Subtotal { get; set; }
+    public List<OrderItemDetailViewModel> Items { get; set; } = [];
+}
+
+public sealed class OrderItemDetailViewModel
+{
+    public int ProductId { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string? ImageUrl { get; set; }
+    public int Quantity { get; set; }
+    public decimal UnitPrice { get; set; }
+    public decimal LineTotal => UnitPrice * Quantity;
+}
