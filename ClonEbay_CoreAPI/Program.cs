@@ -48,6 +48,7 @@ try
     builder.Services.AddScoped<IProductService, ProductService>();
     builder.Services.AddScoped<ICartService, CartService>();
     builder.Services.AddScoped<IOrderService, OrderService>();
+    builder.Services.AddScoped<IAuctionService, AuctionService>();
     builder.Services.AddScoped<IPaymentService, PaymentService>();
     builder.Services.AddScoped<IAddressService, AddressService>();
     builder.Services.AddScoped<IReturnRequestService, ReturnRequestService>();
@@ -57,6 +58,7 @@ try
 
     // 4. Đăng ký SignalR Real-time Services
     builder.Services.AddSignalR();
+    builder.Services.AddHostedService<AuctionFinalizerService>();
 
     // 5. Cấu hình JWT Authentication (hỗ trợ cả HTTP Headers và SignalR WebSocket Query String)
     var jwtSecretKey = builder.Configuration["JwtSettings:SecretKey"] 
@@ -92,7 +94,8 @@ try
             {
                 var accessToken = context.Request.Query["access_token"];
                 var path = context.HttpContext.Request.Path;
-                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/notification"))
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    (path.StartsWithSegments("/hubs/notification") || path.StartsWithSegments("/hubs/auction")))
                 {
                     context.Token = accessToken;
                 }
@@ -177,6 +180,7 @@ try
 
     app.MapControllers();
     app.MapHub<ClonEbay_CoreAPI.Hubs.NotificationHub>("/hubs/notification");
+    app.MapHub<ClonEbay_CoreAPI.Hubs.AuctionHub>("/hubs/auction");
 
     app.Run();
 }

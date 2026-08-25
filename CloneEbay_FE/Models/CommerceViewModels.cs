@@ -2,7 +2,30 @@ using System.ComponentModel.DataAnnotations;
 namespace CloneEbay_FE.Models;
 public sealed class CategoryViewModel { public int Id { get; set; } public string Name { get; set; } = string.Empty; }
 public class ProductCardViewModel { public int Id { get; set; } public string Title { get; set; } = string.Empty; public decimal Price { get; set; } public string? ImageUrl { get; set; } public string? CategoryName { get; set; } public bool IsAuction { get; set; } public decimal AverageRating { get; set; } public int ReviewCount { get; set; } }
-public sealed class ProductDetailViewModel : ProductCardViewModel { public string? Description { get; set; } public DateTime? AuctionEndTime { get; set; } public SellerViewModel? Seller { get; set; } public List<ProductDetailReviewViewModel> Reviews { get; set; } = []; }
+public sealed class ProductDetailViewModel : ProductCardViewModel { public string? Description { get; set; } public DateTime? AuctionEndTime { get; set; } public SellerViewModel? Seller { get; set; } public AuctionDetailViewModel? Auction { get; set; } public List<ProductDetailReviewViewModel> Reviews { get; set; } = []; }
+public sealed class AuctionDetailViewModel
+{
+    public int ProductId { get; set; }
+    public decimal StartingPrice { get; set; }
+    public decimal CurrentPrice { get; set; }
+    public decimal MinimumNextBid { get; set; }
+    public decimal BidIncrement { get; set; }
+    public DateTime EndTime { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public int BidCount { get; set; }
+    public bool IsCurrentUserLeading { get; set; }
+    public decimal? CurrentUserBid { get; set; }
+    public int? OrderId { get; set; }
+    public List<AuctionBidViewModel> RecentBids { get; set; } = [];
+}
+public sealed class AuctionBidViewModel
+{
+    public int Id { get; set; }
+    public string Bidder { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public DateTime BidTime { get; set; }
+    public bool IsCurrentUser { get; set; }
+}
 public sealed class SellerViewModel { public int Id { get; set; } public string Name { get; set; } = string.Empty; public string? AvatarUrl { get; set; } }
 public sealed class ProductDetailReviewViewModel { public int Id { get; set; } public int Rating { get; set; } public string? Comment { get; set; } public string ReviewerName { get; set; } = string.Empty; public DateTime? CreatedAt { get; set; } }
 public sealed class PagedProductViewModel { public List<ProductCardViewModel> Items { get; set; } = []; public int Page { get; set; } public int PageSize { get; set; } public int TotalItems { get; set; } public int TotalPages { get; set; } }

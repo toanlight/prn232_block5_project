@@ -91,6 +91,7 @@ public sealed class PaymentService(CloneEbayDbContext context) : IPaymentService
         var query = context.Payments
             .Include(item => item.Order)
                 .ThenInclude(order => order!.OrderItems)
+                    .ThenInclude(orderItem => orderItem.Product)
             .Include(item => item.Order)
                 .ThenInclude(order => order!.ShippingInfos)
             .AsSplitQuery()
@@ -102,6 +103,8 @@ public sealed class PaymentService(CloneEbayDbContext context) : IPaymentService
     private async Task CompensateCancelledOrderAsync(int userId, OrderTable order)
     {
         var now = DateTime.UtcNow;
+        var isAuctionOrder = order.OrderItems.Any(item => item.Product?.IsAuction == true);
+
         foreach (var shippingInfo in order.ShippingInfos)
         {
             shippingInfo.Status = "Cancelled";
@@ -122,6 +125,11 @@ public sealed class PaymentService(CloneEbayDbContext context) : IPaymentService
 
             inventory.Quantity = (inventory.Quantity ?? 0) + quantity;
             inventory.LastUpdated = now;
+
+            if (isAuctionOrder)
+            {
+                continue;
+            }
 
             var cartItem = await context.CartItems
                 .SingleOrDefaultAsync(item => item.UserId == userId && item.ProductId == productId);
