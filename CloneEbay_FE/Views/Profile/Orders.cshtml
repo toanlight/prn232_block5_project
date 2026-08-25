@@ -62,6 +62,15 @@ else
     <div class="d-flex flex-column gap-4" id="orderListContainer">
         @foreach (var order in Model)
         {
+            var isPayPal = string.Equals(order.PaymentMethod, "PayPal", StringComparison.OrdinalIgnoreCase);
+            var isPaymentPaid = string.Equals(order.PaymentStatus, "Paid", StringComparison.OrdinalIgnoreCase);
+            var isPendingPayPal = isPayPal && !isPaymentPaid &&
+                string.Equals(order.Status, "Pending", StringComparison.OrdinalIgnoreCase);
+            var canConfirmReceipt =
+                (string.Equals(order.Status, "Confirmed", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(order.Status, "Shipping", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(order.Status, "Shipped", StringComparison.OrdinalIgnoreCase)) &&
+                (!isPayPal || isPaymentPaid);
             <div class="card border-0 shadow-sm rounded-4 overflow-hidden order-card-item" data-status="@order.Status">
                 <!-- Header Đơn hàng chuẩn eBay -->
                 <div class="card-header bg-light py-3 px-4 d-flex align-items-center justify-content-between border-bottom flex-wrap gap-2">
@@ -72,6 +81,10 @@ else
                         </span>
                         <span class="badge bg-secondary bg-opacity-10 text-secondary border px-2.5 py-1 rounded-2 fs-7">
                             <i class="bi bi-credit-card me-1"></i>@(order.PaymentMethod ?? "COD")
+                        </span>
+                        <span class="badge @(isPaymentPaid ? "bg-success bg-opacity-10 text-success border-success" : "bg-warning bg-opacity-10 text-warning border-warning") border px-2.5 py-1 rounded-2 fs-7">
+                            <i class="bi @(isPaymentPaid ? "bi-check-circle" : "bi-hourglass-split") me-1"></i>
+                            @(isPaymentPaid ? "Đã thanh toán" : isPayPal ? "Chờ thanh toán" : "Thanh toán khi nhận hàng")
                         </span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
@@ -252,7 +265,13 @@ else
                 <!-- Footer Đơn hàng: Tổng tiền & Action trả hàng / xác nhận nhận hàng -->
                 <div class="card-footer bg-white py-3 px-4 d-flex align-items-center justify-content-between border-top">
                     <div class="d-flex align-items-center gap-2">
-                        @if (order.Status != "Delivered" && order.Status != "Cancelled" && order.Status != "Returned")
+                        @if (isPendingPayPal)
+                        {
+                            <a asp-controller="Payment" asp-action="PayPal" asp-route-orderId="@order.Id" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm fw-bold">
+                                <i class="bi bi-paypal me-1"></i>Tiếp tục thanh toán
+                            </a>
+                        }
+                        else if (canConfirmReceipt)
                         {
                             <form asp-controller="Profile" asp-action="ConfirmReceipt" method="post" class="d-inline">
                                 <input type="hidden" name="orderId" value="@order.Id" />
