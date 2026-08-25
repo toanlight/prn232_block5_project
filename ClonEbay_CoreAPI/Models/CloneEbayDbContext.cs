@@ -29,6 +29,8 @@ public partial class CloneEbayDbContext : DbContext
 
     public virtual DbSet<Feedback> Feedbacks { get; set; }
 
+    public virtual DbSet<FavoriteProduct> FavoriteProducts { get; set; }
+
     public virtual DbSet<Inventory> Inventories { get; set; }
 
     public virtual DbSet<Message> Messages { get; set; }
@@ -67,6 +69,19 @@ public partial class CloneEbayDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<FavoriteProduct>(entity =>
+        {
+            entity.ToTable("FavoriteProduct");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.UserId).HasColumnName("userId");
+            entity.Property(e => e.ProductId).HasColumnName("productId");
+            entity.Property(e => e.CreatedAt).HasColumnName("createdAt");
+            entity.HasIndex(e => new { e.UserId, e.ProductId }).IsUnique();
+            entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId);
+            entity.HasOne(e => e.Product).WithMany().HasForeignKey(e => e.ProductId);
+        });
+
         modelBuilder.Entity<Notification>(entity =>
         {
             entity.ToTable("Notification");
