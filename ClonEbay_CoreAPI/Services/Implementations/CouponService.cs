@@ -123,8 +123,8 @@ namespace ClonEbay_CoreAPI.Services.Implementations
 
             var createdCoupon = await _couponRepo.GetByIdAsync(coupon.Id);
 
-            // Gửi thông báo Real-time qua SignalR cho các Buyer
-            _ = Task.Run(() => _notificationService.SendPromotionNotificationAsync(new PromotionNotificationDto
+            // Gửi thông báo Real-time và Ghi CSDL cho các Buyer
+            await _notificationService.SendPromotionNotificationAsync(new PromotionNotificationDto
             {
                 CouponId = coupon.Id,
                 Code = coupon.Code ?? string.Empty,
@@ -132,7 +132,7 @@ namespace ClonEbay_CoreAPI.Services.Implementations
                 ProductId = dto.ProductId,
                 ProductTitle = product.Title ?? string.Empty,
                 Message = $"Mã giảm giá '{coupon.Code}' vừa ra mắt! Giảm {dto.DiscountPercent}% cho sản phẩm {product.Title}."
-            }));
+            });
 
             return ApiResponse<CouponDto>.Ok(ToDto(createdCoupon ?? coupon), "Tạo mã giảm giá mới thành công.");
         }

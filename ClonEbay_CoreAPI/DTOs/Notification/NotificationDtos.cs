@@ -43,4 +43,43 @@ namespace ClonEbay_CoreAPI.DTOs.Notification
         public string Message { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
+
+    /// <summary>
+    /// DTO hiển thị danh sách thông báo người dùng từ CSDL.
+    /// </summary>
+    public class NotificationDto
+    {
+        public int Id { get; set; }
+        public int? UserId { get; set; }
+        public string? UserRole { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string? Content { get; set; }
+        public string Type { get; set; } = "InApp";
+        public string Status { get; set; } = "Sent";
+        public bool IsRead { get; set; }
+        public string? LinkUrl { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+    /// <summary>
+    /// DTO tạo thông báo mới từ hệ thống hoặc Admin.
+    /// </summary>
+    public class CreateNotificationDto
+    {
+        public int? UserId { get; set; }
+        public string? UserRole { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string? Content { get; set; }
+        public string Type { get; set; } = "InApp";
+        public string? LinkUrl { get; set; }
+        public int? CreatedBy { get; set; }
+    }
+
+    /// <summary>
+    /// DTO số lượng thông báo chưa đọc.
+    /// </summary>
+    public class UnreadCountDto
+    {
+        public int UnreadCount { get; set; }
+    }
 }

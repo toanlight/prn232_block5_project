@@ -1,16 +1,18 @@
+using ClonEbay_CoreAPI.Common.Models;
 using ClonEbay_CoreAPI.DTOs.Notification;
 
 namespace ClonEbay_CoreAPI.Services.Interfaces
 {
     public interface INotificationService
     {
-        /// <summary>Gửi thông báo Đơn hàng tới Seller (chủ shop) và Admin / Buyer.</summary>
+        Task<ApiResponse<List<NotificationDto>>> GetUserNotificationsAsync(int userId, string userRole);
+        Task<ApiResponse<UnreadCountDto>> GetUnreadCountAsync(int userId, string userRole);
+        Task<ApiResponse<bool>> MarkAsReadAsync(int notificationId, int userId);
+        Task<ApiResponse<bool>> MarkAllAsReadAsync(int userId, string userRole);
+        Task CreateNotificationAsync(CreateNotificationDto dto);
+
         Task SendOrderNotificationAsync(OrderNotificationDto dto);
-
-        /// <summary>Gửi thông báo Khuyến mãi / Coupon mới tới các Buyer.</summary>
         Task SendPromotionNotificationAsync(PromotionNotificationDto dto);
-
-        /// <summary>Gửi thông báo Đánh giá / Phản hồi tới Seller sở hữu sản phẩm.</summary>
         Task SendFeedbackNotificationAsync(FeedbackNotificationDto dto);
     }
 }

@@ -732,8 +732,26 @@
         }
 
 
-        // Start SignalR
+        // Update unread count badge from DB API
+        function updateUnreadBadgeFromApi() {
+            fetch('/Notification/UnreadCount')
+                .then(r => r.json())
+                .then(data => {
+                    const badge = document.getElementById('notifBadge');
+                    if (badge) {
+                        if (data && data.unreadCount > 0) {
+                            badge.textContent = data.unreadCount > 99 ? '99+' : data.unreadCount;
+                            badge.classList.remove('d-none');
+                        } else {
+                            badge.classList.add('d-none');
+                        }
+                    }
+                }).catch(err => console.log('Unread count fetch error:', err));
+        }
+
+        // Start SignalR & Fetch initial unread count
         startSignalR();
+        updateUnreadBadgeFromApi();
 
 
         // =====================================================
