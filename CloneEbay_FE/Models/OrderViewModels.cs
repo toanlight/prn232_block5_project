@@ -12,6 +12,8 @@ namespace CloneEbay_FE.Models
         public string? ShippingStatus { get; set; }
         public DateTime? EstimatedArrival { get; set; }
         public string? PaymentMethod { get; set; }
+        public string? PaymentStatus { get; set; }
+        public DateTime? PaymentPaidAt { get; set; }
     }
 
     public class OrderItemViewModel

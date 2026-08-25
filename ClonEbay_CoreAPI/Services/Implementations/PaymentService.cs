@@ -62,6 +62,11 @@ public sealed class PaymentService(CloneEbayDbContext context) : IPaymentService
             throw new NotFoundException("Không tìm thấy giao dịch thanh toán.");
         }
 
+        if (!string.Equals(order.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new BadRequestException("Đơn hàng không còn ở trạng thái chờ thanh toán PayPal.");
+        }
+
         if (request.Succeeded)
         {
             payment.Status = "Paid";
@@ -120,7 +125,9 @@ public sealed class PaymentService(CloneEbayDbContext context) : IPaymentService
             var productId = orderItem.ProductId.Value;
             var quantity = orderItem.Quantity.Value;
             var inventory = await context.Inventories
-                .SingleOrDefaultAsync(item => item.ProductId == productId)
+                .Where(item => item.ProductId == productId)
+                .OrderBy(item => item.Id)
+                .FirstOrDefaultAsync()
                 ?? throw new BadRequestException($"Không tìm thấy tồn kho của sản phẩm #{productId} để hoàn tác giao dịch.");
 
             inventory.Quantity = (inventory.Quantity ?? 0) + quantity;
@@ -171,8 +178,16 @@ public sealed class PaymentService(CloneEbayDbContext context) : IPaymentService
         OrderId = payment.OrderId ?? 0,
         ItemCount = payment.Order?.OrderItems.Sum(item => item.Quantity ?? 0) ?? 0,
         Amount = payment.Amount ?? 0,
-        Method = payment.Method ?? "PayPal",
-        PaymentStatus = payment.Status ?? "Pending",
+        Method = string.Equals(payment.Method, "PayPal", StringComparison.OrdinalIgnoreCase)
+            ? "PayPal"
+            : payment.Method ?? "PayPal",
+        PaymentStatus = string.Equals(payment.Status, "Paid", StringComparison.OrdinalIgnoreCase)
+            ? "Paid"
+            : string.Equals(payment.Status, "Failed", StringComparison.OrdinalIgnoreCase)
+                ? "Failed"
+                : string.Equals(payment.Status, "Pending", StringComparison.OrdinalIgnoreCase)
+                    ? "Pending"
+                    : string.IsNullOrWhiteSpace(payment.Status) ? "Pending" : payment.Status.Trim(),
         OrderStatus = payment.Order?.Status ?? "Pending",
         PaidAt = payment.PaidAt
     };

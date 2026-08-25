@@ -199,12 +199,25 @@ public sealed class OrderService(CloneEbayDbContext context) : IOrderService
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
                     .ThenInclude(p => p!.Seller)
-            .Include(o => o.ReturnRequests)
             .Include(o => o.ShippingInfos)
             .Include(o => o.Payments)
             .Where(o => o.BuyerId == userId)
             .OrderByDescending(o => o.OrderDate ?? DateTime.MinValue)
             .ToListAsync();
+
+        var orderIds = orders.Select(order => order.Id).ToList();
+        var openReturnOrderIds = await context.ReturnRequests
+            .AsNoTracking()
+            .Where(request =>
+                request.OrderId.HasValue &&
+                orderIds.Contains(request.OrderId.Value) &&
+                (request.Status == "Pending" ||
+                 request.Status == "Requested" ||
+                 request.Status == "Escalated"))
+            .Select(request => request.OrderId!.Value)
+            .Distinct()
+            .ToListAsync();
+        var ordersWithOpenReturns = openReturnOrderIds.ToHashSet();
 
         var userReviews = await context.Reviews
             .AsNoTracking()
@@ -222,11 +235,13 @@ public sealed class OrderService(CloneEbayDbContext context) : IOrderService
                 OrderDate = o.OrderDate,
                 TotalPrice = o.TotalPrice ?? 0,
                 Status = o.Status ?? "Pending",
-                HasPendingReturnRequest = o.ReturnRequests.Any(r => r.Status == "Pending"),
+                HasPendingReturnRequest = ordersWithOpenReturns.Contains(o.Id),
                 ShippingCarrier = shipping?.Carrier ?? "Standard",
                 ShippingStatus = shipping?.Status ?? "Preparing",
                 EstimatedArrival = shipping?.EstimatedArrival ?? o.OrderDate?.AddDays(3),
-                PaymentMethod = payment?.Method ?? "COD",
+                PaymentMethod = NormalizePaymentMethod(payment?.Method),
+                PaymentStatus = NormalizePaymentStatusForOrder(o.Status, payment),
+                PaymentPaidAt = payment?.PaidAt,
                 Items = o.OrderItems.Select(oi =>
                 {
                     var review = userReviews.FirstOrDefault(r => r.ProductId == oi.ProductId);
@@ -256,16 +271,65 @@ public sealed class OrderService(CloneEbayDbContext context) : IOrderService
     public async Task<ApiResponse<OrderDto>> ConfirmReceiptAsync(int userId, int orderId)
     {
         var order = await context.OrderTables
+            .AsSplitQuery()
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
             .Include(o => o.ShippingInfos)
+            .Include(o => o.Payments)
             .SingleOrDefaultAsync(o => o.Id == orderId && o.BuyerId == userId)
             ?? throw new NotFoundException("Không tìm thấy đơn hàng.");
+
+        var payment = order.Payments.OrderBy(item => item.Id).FirstOrDefault();
+        var isCod = string.Equals(payment?.Method, "COD", StringComparison.OrdinalIgnoreCase);
+        var isPaid = string.Equals(payment?.Status, "Paid", StringComparison.OrdinalIgnoreCase);
+        var isDelivered = string.Equals(
+            order.Status,
+            nameof(Models.Enums.OrderStatus.Delivered),
+            StringComparison.OrdinalIgnoreCase);
+        if (isDelivered)
+        {
+            if (isCod && !isPaid && payment is not null)
+            {
+                payment.Status = "Paid";
+                payment.PaidAt = DateTime.UtcNow;
+                await context.SaveChangesAsync();
+            }
+
+            return ApiResponse<OrderDto>.Ok(
+                ToReceiptOrderDto(order),
+                "Đơn hàng đã được xác nhận nhận hàng trước đó.");
+        }
 
         if (string.Equals(order.Status, nameof(Models.Enums.OrderStatus.Cancelled), StringComparison.OrdinalIgnoreCase) ||
             string.Equals(order.Status, nameof(Models.Enums.OrderStatus.Returned), StringComparison.OrdinalIgnoreCase))
         {
             throw new BadRequestException("Không thể xác nhận đơn hàng đã bị hủy hoặc hoàn trả.");
+        }
+
+        var canConfirmReceipt =
+            string.Equals(order.Status, nameof(Models.Enums.OrderStatus.Confirmed), StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(order.Status, nameof(Models.Enums.OrderStatus.Shipping), StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(order.Status, "Shipped", StringComparison.OrdinalIgnoreCase);
+        if (!canConfirmReceipt)
+        {
+            throw new BadRequestException("Đơn hàng chưa được thanh toán hoặc chưa sẵn sàng để xác nhận nhận hàng.");
+        }
+
+        if (payment is null)
+        {
+            throw new BadRequestException("Đơn hàng không có thông tin thanh toán hợp lệ.");
+        }
+
+        if (!isCod && !isPaid)
+        {
+            throw new BadRequestException("Đơn hàng thanh toán trực tuyến chưa được thanh toán thành công.");
+        }
+
+        var now = DateTime.UtcNow;
+        if (isCod && !isPaid)
+        {
+            payment.Status = "Paid";
+            payment.PaidAt = now;
         }
 
         order.Status = nameof(Models.Enums.OrderStatus.Delivered);
@@ -277,10 +341,41 @@ public sealed class OrderService(CloneEbayDbContext context) : IOrderService
 
         await context.SaveChangesAsync();
 
-        var ordersRes = await GetUserOrdersAsync(userId);
-        var updatedDto = ordersRes.Data?.FirstOrDefault(o => o.Id == orderId);
+        return ApiResponse<OrderDto>.Ok(
+            ToReceiptOrderDto(order),
+            isCod
+                ? "Xác nhận đã nhận hàng và hoàn tất thanh toán COD thành công."
+                : "Xác nhận đã nhận hàng thành công. Bạn có thể viết đánh giá hoặc gửi yêu cầu hoàn trả.");
+    }
 
-        return ApiResponse<OrderDto>.Ok(updatedDto!, "Xác nhận đã nhận hàng thành công. Bạn có thể viết đánh giá hoặc gửi yêu cầu hoàn trả.");
+    private static OrderDto ToReceiptOrderDto(OrderTable order)
+    {
+        var shipping = order.ShippingInfos.OrderBy(item => item.Id).FirstOrDefault();
+        var payment = order.Payments.OrderBy(item => item.Id).FirstOrDefault();
+
+        return new OrderDto
+        {
+            Id = order.Id,
+            OrderDate = order.OrderDate,
+            TotalPrice = order.TotalPrice ?? 0,
+            Status = order.Status ?? "Pending",
+            ShippingCarrier = shipping?.Carrier ?? "Standard",
+            ShippingStatus = shipping?.Status ?? "Preparing",
+            EstimatedArrival = shipping?.EstimatedArrival,
+            PaymentMethod = NormalizePaymentMethod(payment?.Method),
+            PaymentStatus = NormalizePaymentStatusForOrder(order.Status, payment),
+            PaymentPaidAt = payment?.PaidAt,
+            Items = order.OrderItems.Select(item => new OrderItemDto
+            {
+                Id = item.Id,
+                ProductId = item.ProductId ?? 0,
+                ProductTitle = item.Product?.Title ?? "Sản phẩm",
+                ImageUrl = ProductService.FirstImage(item.Product?.Images),
+                Quantity = item.Quantity ?? 0,
+                UnitPrice = item.UnitPrice ?? 0,
+                SellerId = item.Product?.SellerId
+            }).ToList()
+        };
     }
 
     private async Task<List<CartItem>> LoadCartAsync(int userId, bool asTracking)
@@ -321,6 +416,32 @@ public sealed class OrderService(CloneEbayDbContext context) : IOrderService
     };
 
     private static decimal CalculateShippingFee(Address address) => IsHoChiMinhCity(address.City) ? 30_000m : 50_000m;
+
+    private static string NormalizePaymentMethod(string? method) =>
+        string.Equals(method, "PayPal", StringComparison.OrdinalIgnoreCase)
+            ? "PayPal"
+            : string.Equals(method, "COD", StringComparison.OrdinalIgnoreCase)
+                ? "COD"
+                : string.IsNullOrWhiteSpace(method) ? "COD" : method.Trim();
+
+    private static string NormalizePaymentStatus(string? status) =>
+        string.Equals(status, "Paid", StringComparison.OrdinalIgnoreCase)
+            ? "Paid"
+            : string.Equals(status, "Failed", StringComparison.OrdinalIgnoreCase)
+                ? "Failed"
+                : string.Equals(status, "Pending", StringComparison.OrdinalIgnoreCase)
+                    ? "Pending"
+                    : string.IsNullOrWhiteSpace(status) ? "Pending" : status.Trim();
+
+    private static string NormalizePaymentStatusForOrder(string? orderStatus, Payment? payment)
+    {
+        var codWasCollected = string.Equals(payment?.Method, "COD", StringComparison.OrdinalIgnoreCase) &&
+            (string.Equals(orderStatus, "Delivered", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(orderStatus, "Return Requested", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(orderStatus, "Returned", StringComparison.OrdinalIgnoreCase));
+
+        return codWasCollected ? "Paid" : NormalizePaymentStatus(payment?.Status);
+    }
 
     private static bool IsHoChiMinhCity(string? city)
     {

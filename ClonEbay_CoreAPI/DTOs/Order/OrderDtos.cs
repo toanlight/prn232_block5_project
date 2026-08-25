@@ -12,6 +12,8 @@ namespace ClonEbay_CoreAPI.DTOs.Order
         public string? ShippingStatus { get; set; }
         public DateTime? EstimatedArrival { get; set; }
         public string? PaymentMethod { get; set; }
+        public string? PaymentStatus { get; set; }
+        public DateTime? PaymentPaidAt { get; set; }
     }
 
     public class OrderItemDto
