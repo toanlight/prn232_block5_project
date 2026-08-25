@@ -16,6 +16,12 @@ public sealed class ProductsController(IApiClientService apiClient) : Controller
         var product = await apiClient.GetAsync<ProductDetailViewModel>($"products/{id}");
         if (product?.Success != true || product.Data is null) return NotFound();
 
+        if (Token() is not null)
+        {
+            var favorite = await apiClient.GetAsync<bool>($"favorites/contains/{id}", Token());
+            ViewBag.IsFavorite = favorite?.Success == true && favorite.Data;
+        }
+
         if (product.Data.IsAuction)
         {
             var auction = await apiClient.GetAsync<AuctionDetailViewModel>(
