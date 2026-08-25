@@ -20,8 +20,29 @@ namespace ClonEbay_CoreAPI.Repositories.Implementations
         {
             return _returnRequests
                 .AsNoTracking()
+                .AsSplitQuery()
                 .Include(r => r.Order)
+                .Include(r => r.OrderItem)
+                .Include(r => r.Product)
+                    .ThenInclude(p => p!.Seller)
+                .Include(r => r.Evidences)
                 .Where(r => r.UserId == userId)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+        }
+
+        public Task<List<Models.ReturnRequest>> GetBySellerIdAsync(int sellerId)
+        {
+            return _returnRequests
+                .AsNoTracking()
+                .AsSplitQuery()
+                .Include(r => r.Order)
+                .Include(r => r.OrderItem)
+                .Include(r => r.Product)
+                    .ThenInclude(p => p!.Seller)
+                .Include(r => r.User)
+                .Include(r => r.Evidences)
+                .Where(r => r.Product != null && r.Product.SellerId == sellerId)
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
         }
@@ -30,8 +51,13 @@ namespace ClonEbay_CoreAPI.Repositories.Implementations
         {
             return _returnRequests
                 .AsNoTracking()
+                .AsSplitQuery()
                 .Include(r => r.Order)
+                .Include(r => r.OrderItem)
+                .Include(r => r.Product)
+                    .ThenInclude(p => p!.Seller)
                 .Include(r => r.User)
+                .Include(r => r.Evidences)
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
         }
@@ -39,21 +65,40 @@ namespace ClonEbay_CoreAPI.Repositories.Implementations
         public Task<Models.ReturnRequest?> GetByIdAsync(int id)
         {
             return _returnRequests
+                .AsSplitQuery()
                 .Include(r => r.Order)
+                .Include(r => r.OrderItem)
+                .Include(r => r.Product)
+                    .ThenInclude(p => p!.Seller)
                 .Include(r => r.User)
+                .Include(r => r.Evidences)
                 .FirstOrDefaultAsync(r => r.Id == id);
         }
 
-        public Task<bool> HasPendingRequestAsync(int orderId)
+        public Task<bool> HasPendingRequestAsync(int orderId, int? orderItemId = null)
         {
-            return _returnRequests
-                .AnyAsync(r => r.OrderId == orderId
-                               && r.Status == nameof(ReturnRequestStatus.Pending));
+            var query = _returnRequests.Where(r => r.OrderId == orderId &&
+                (r.Status == nameof(ReturnRequestStatus.Requested) ||
+                 r.Status == nameof(ReturnRequestStatus.Pending) ||
+                 r.Status == nameof(ReturnRequestStatus.Approved) ||
+                 r.Status == nameof(ReturnRequestStatus.Returning) ||
+                 r.Status == nameof(ReturnRequestStatus.Returned) ||
+                 r.Status == nameof(ReturnRequestStatus.Escalated)));
+
+            if (orderItemId.HasValue && orderItemId.Value > 0)
+            {
+                query = query.Where(r => r.OrderItemId == orderItemId.Value);
+            }
+
+            return query.AnyAsync();
         }
 
         public Task<OrderTable?> GetOrderByIdAsync(int orderId)
         {
             return _context.OrderTables
+                .AsSplitQuery()
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Product)
                 .FirstOrDefaultAsync(o => o.Id == orderId);
         }
 

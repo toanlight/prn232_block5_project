@@ -43,11 +43,17 @@ public partial class CloneEbayDbContext : DbContext
 
     public virtual DbSet<ReturnRequest> ReturnRequests { get; set; }
 
+    public virtual DbSet<ReturnEvidence> ReturnEvidences { get; set; }
+
     public virtual DbSet<Review> Reviews { get; set; }
 
     public virtual DbSet<ShippingInfo> ShippingInfos { get; set; }
 
     public virtual DbSet<Store> Stores { get; set; }
+
+    public virtual DbSet<Notification> Notifications { get; set; }
+
+    public virtual DbSet<UserNotificationRead> UserNotificationReads { get; set; }
 
     public virtual DbSet<User> Users { get; set; }
 
@@ -61,6 +67,16 @@ public partial class CloneEbayDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.ToTable("Notification");
+        });
+
+        modelBuilder.Entity<UserNotificationRead>(entity =>
+        {
+            entity.ToTable("UserNotificationRead");
+        });
+
         modelBuilder.Entity<CartItem>(entity =>
         {
             entity.ToTable("CartItem");
@@ -394,28 +410,39 @@ public partial class CloneEbayDbContext : DbContext
 
         modelBuilder.Entity<ReturnRequest>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__ReturnRe__3213E83F1496CF2F");
-
+            entity.HasKey(e => e.Id);
             entity.ToTable("ReturnRequest");
-
             entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.CreatedAt)
-                .HasColumnType("datetime")
-                .HasColumnName("createdAt");
             entity.Property(e => e.OrderId).HasColumnName("orderId");
-            entity.Property(e => e.Reason).HasColumnName("reason");
-            entity.Property(e => e.Status)
-                .HasMaxLength(20)
-                .HasColumnName("status");
+            entity.Property(e => e.OrderItemId).HasColumnName("orderItemId");
+            entity.Property(e => e.ProductId).HasColumnName("productId");
             entity.Property(e => e.UserId).HasColumnName("userId");
+            entity.Property(e => e.Reason).HasColumnName("reason");
+            entity.Property(e => e.Status).HasMaxLength(50).HasColumnName("status");
+            entity.Property(e => e.RefundAmount).HasColumnType("decimal(10, 2)").HasColumnName("refundAmount");
+            entity.Property(e => e.RefundType).HasMaxLength(20).HasColumnName("refundType");
+            entity.Property(e => e.TrackingNumber).HasMaxLength(100).HasColumnName("trackingNumber");
+            entity.Property(e => e.IsEscalated).HasColumnName("isEscalated");
+            entity.Property(e => e.EscalationReason).HasColumnName("escalationReason");
+            entity.Property(e => e.AdminNotes).HasColumnName("adminNotes");
+            entity.Property(e => e.CreatedAt).HasColumnType("datetime").HasColumnName("createdAt");
 
-            entity.HasOne(d => d.Order).WithMany(p => p.ReturnRequests)
-                .HasForeignKey(d => d.OrderId)
-                .HasConstraintName("FK__ReturnReq__order__5165187F");
+            entity.HasOne(d => d.Order).WithMany(p => p.ReturnRequests).HasForeignKey(d => d.OrderId);
+            entity.HasOne(d => d.User).WithMany(p => p.ReturnRequests).HasForeignKey(d => d.UserId);
+            entity.HasOne(d => d.OrderItem).WithMany().HasForeignKey(d => d.OrderItemId);
+            entity.HasOne(d => d.Product).WithMany().HasForeignKey(d => d.ProductId);
+        });
 
-            entity.HasOne(d => d.User).WithMany(p => p.ReturnRequests)
-                .HasForeignKey(d => d.UserId)
-                .HasConstraintName("FK__ReturnReq__userI__52593CB8");
+        modelBuilder.Entity<ReturnEvidence>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.ToTable("ReturnEvidence");
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.ReturnRequestId).HasColumnName("returnRequestId");
+            entity.Property(e => e.FileUrl).HasColumnName("fileUrl");
+            entity.Property(e => e.UploadedAt).HasColumnType("datetime").HasColumnName("uploadedAt");
+
+            entity.HasOne(d => d.ReturnRequest).WithMany(p => p.Evidences).HasForeignKey(d => d.ReturnRequestId);
         });
 
         modelBuilder.Entity<Review>(entity =>
