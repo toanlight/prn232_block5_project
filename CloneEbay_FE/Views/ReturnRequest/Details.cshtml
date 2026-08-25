@@ -1,0 +1,383 @@
+@model CloneEbay_FE.Models.ReturnRequestViewModel
+@{
+    ViewData["Title"] = $"Chi tiết Yêu cầu Hoàn trả #{Model.Id} - eBay Standard";
+    var userRole = Context.Session.GetString("Role") ?? string.Empty;
+    var currentUserId = Context.Session.GetInt32("UserId") ?? 0;
+    var currentUsername = Context.Session.GetString("Username") ?? string.Empty;
+    var isSeller = userRole.Equals("Seller", StringComparison.OrdinalIgnoreCase) 
+                || (Model.SellerId.HasValue && Model.SellerId.Value == currentUserId)
+                || (!string.IsNullOrEmpty(Model.SellerName) && Model.SellerName.Equals(currentUsername, StringComparison.OrdinalIgnoreCase));
+    var isAdmin = userRole.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+    var isBuyer = !isSeller && !isAdmin;
+
+    // Timeline step index (0 to 4)
+    int currentStep = Model.Status switch
+    {
+        "Requested" or "Pending" => 0,
+        "Approved" => 1,
+        "Returning" => 2,
+        "Returned" => 3,
+        "Refunded" => 4,
+        _ => 0
+    };
+
+    var statusBadgeClass = Model.Status switch
+    {
+        "Requested" or "Pending" => "bg-warning text-dark",
+        "Approved" => "bg-primary text-white",
+        "Returning" => "bg-info text-white",
+        "Returned" => "bg-primary text-white",
+        "Refunded" => "bg-success text-white",
+        "Rejected" => "bg-danger text-white",
+        "Cancelled" => "bg-secondary text-white",
+        "Escalated" => "bg-danger text-white fw-bold",
+        _ => "bg-secondary text-white"
+    };
+
+    var statusText = Model.Status switch
+    {
+        "Requested" or "Pending" => "Đã gửi yêu cầu (Chờ Seller)",
+        "Approved" => "Seller đã đồng ý (Chờ gửi trả hàng)",
+        "Returning" => "Đang vận chuyển trả hàng",
+        "Returned" => "Seller đã nhận lại hàng",
+        "Refunded" => "Đã hoàn tiền thành công",
+        "Rejected" => "Yêu cầu bị từ chối",
+        "Cancelled" => "Đã huỷ yêu cầu",
+        "Escalated" => "Đã yêu cầu Admin eBay can thiệp",
+        _ => Model.Status
+    };
+}
+
+<div class="container py-4">
+    <!-- Breadcrumb & Top Bar -->
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a asp-controller="Profile" asp-action="Orders" class="text-decoration-none">Đơn mua</a></li>
+                    <li class="breadcrumb-item"><a asp-action="Index" class="text-decoration-none">Yêu cầu hoàn trả</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Chi tiết #@Model.Id</li>
+                </ol>
+            </nav>
+            <h3 class="fw-bold text-dark mb-0">
+                <i class="bi bi-arrow-return-left text-primary me-2"></i>Tiến Trình Hoàn Trả #@Model.Id
+            </h3>
+        </div>
+        <span class="badge @statusBadgeClass fs-6 px-3 py-2 rounded-pill shadow-sm">
+            @statusText
+        </span>
+    </div>
+
+    <!-- Escalation Alert Banner -->
+    @if (Model.IsEscalated)
+    {
+        <div class="alert alert-danger border-0 shadow-sm rounded-4 p-4 mb-4 d-flex align-items-center gap-3">
+            <i class="bi bi-shield-fill-exclamation text-danger display-5"></i>
+            <div>
+                <h5 class="fw-bold mb-1">Đã kích hoạt hỗ trợ tranh chấp (Ask eBay to Step In)</h5>
+                <p class="mb-0 small">Yêu cầu này đã được chuyển lên Ban Quản Trị Admin eBay để can thiệp xử lý. Lý do can thiệp: <strong>@Model.EscalationReason</strong></p>
+            </div>
+        </div>
+    }
+
+    <!-- Timeline Stepper (Only show if active flow) -->
+    @if (Model.Status != "Rejected" && Model.Status != "Cancelled")
+    {
+        <div class="card border-0 shadow-sm rounded-4 mb-4 p-4">
+            <h6 class="fw-bold text-muted mb-4 text-uppercase fs-7 tracking-wider">Trạng Thái Tiến Trình Trả Hàng (eBay Timeline)</h6>
+            <div class="row text-center position-relative g-0">
+                <!-- Step 1: Requested -->
+                <div class="col">
+                    <div class="d-flex flex-column align-items-center">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white mb-2 @(currentStep >= 0 ? "bg-primary shadow" : "bg-secondary opacity-50")" style="width: 42px; height: 42px;">
+                            1
+                        </div>
+                        <div class="fw-semibold small @(currentStep >= 0 ? "text-dark" : "text-muted")">Yêu cầu trả hàng</div>
+                        <div class="text-muted fs-7">@Model.CreatedAt.ToString("dd/MM/yyyy")</div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Approved -->
+                <div class="col">
+                    <div class="d-flex flex-column align-items-center">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white mb-2 @(currentStep >= 1 ? "bg-primary shadow" : "bg-secondary opacity-50")" style="width: 42px; height: 42px;">
+                            2
+                        </div>
+                        <div class="fw-semibold small @(currentStep >= 1 ? "text-dark" : "text-muted")">Seller Chấp nhận</div>
+                        <div class="text-muted fs-7">Duyệt hoàn trả</div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Returning -->
+                <div class="col">
+                    <div class="d-flex flex-column align-items-center">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white mb-2 @(currentStep >= 2 ? "bg-primary shadow" : "bg-secondary opacity-50")" style="width: 42px; height: 42px;">
+                            3
+                        </div>
+                        <div class="fw-semibold small @(currentStep >= 2 ? "text-dark" : "text-muted")">Gửi vận chuyển</div>
+                        <div class="text-muted fs-7">@(string.IsNullOrEmpty(Model.TrackingNumber) ? "Chờ mã vận chuyển" : Model.TrackingNumber)</div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Returned -->
+                <div class="col">
+                    <div class="d-flex flex-column align-items-center">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white mb-2 @(currentStep >= 3 ? "bg-primary shadow" : "bg-secondary opacity-50")" style="width: 42px; height: 42px;">
+                            4
+                        </div>
+                        <div class="fw-semibold small @(currentStep >= 3 ? "text-dark" : "text-muted")">Seller Nhận hàng</div>
+                        <div class="text-muted fs-7">Xác nhận hàng trả về</div>
+                    </div>
+                </div>
+
+                <!-- Step 5: Refunded -->
+                <div class="col">
+                    <div class="d-flex flex-column align-items-center">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white mb-2 @(currentStep >= 4 ? "bg-success shadow" : "bg-secondary opacity-50")" style="width: 42px; height: 42px;">
+                            <i class="bi bi-check-lg"></i>
+                        </div>
+                        <div class="fw-semibold small @(currentStep >= 4 ? "text-success fw-bold" : "text-muted")">Hoàn tiền</div>
+                        <div class="text-muted fs-7">Hoàn tất quy trình</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="row g-4">
+        <!-- Main Details Left -->
+        <div class="col-lg-8">
+            <!-- Product & Order Info -->
+            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                <h5 class="fw-bold text-dark mb-3 border-bottom pb-2">Sản Phẩm Yêu Cầu Trả Hàng</h5>
+                <div class="d-flex align-items-center gap-3">
+                    @if (!string.IsNullOrEmpty(Model.ProductImageUrl))
+                    {
+                        <img src="@Model.ProductImageUrl" alt="@Model.ProductTitle" class="rounded-3 border" style="width: 80px; height: 80px; object-fit: cover;" />
+                    }
+                    else
+                    {
+                        <div class="bg-secondary text-white rounded-3 d-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                            <i class="bi bi-box display-6"></i>
+                        </div>
+                    }
+                    <div class="flex-grow-1">
+                        <h6 class="fw-bold text-dark mb-1">@Model.ProductTitle</h6>
+                        <div class="text-muted small mb-1">
+                            Mã đơn hàng: <a asp-controller="Profile" asp-action="Orders" class="fw-bold text-primary text-decoration-none">#@Model.OrderId</a>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="text-danger fw-bold fs-5">@Model.UnitPrice.ToString("N0") ₫</span>
+                            <span class="badge bg-light text-dark border">Số lượng: x@(Model.Quantity)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reason & Description -->
+            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                <h5 class="fw-bold text-dark mb-3 border-bottom pb-2">Lý Do Chi Tiết & Bằng Chứng</h5>
+                <div class="p-3 bg-light rounded-3 mb-3 border">
+                    <span class="fw-bold text-dark d-block mb-1">Mô tả lý do từ Buyer:</span>
+                    <p class="text-dark mb-0 fs-6" style="white-space: pre-line;">@Model.Reason</p>
+                </div>
+
+                <!-- Evidence Photos Gallery -->
+                <h6 class="fw-bold text-dark mb-2">Ảnh Bằng Chứng Thực Tế (@Model.Evidences.Count):</h6>
+                @if (Model.Evidences != null && Model.Evidences.Any())
+                {
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var ev in Model.Evidences)
+                        {
+                            <a href="@ev.FileUrl" target="_blank" title="Bấm để xem ảnh phóng to">
+                                <img src="@ev.FileUrl" class="rounded-3 border shadow-sm hover-zoom" style="width: 100px; height: 100px; object-fit: cover;" />
+                            </a>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-muted fs-7 fst-italic">Không có ảnh bằng chứng được tải lên.</div>
+                }
+            </div>
+        </div>
+
+        <!-- Action Panel Right -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4 sticky-top" style="top: 90px;">
+                <h5 class="fw-bold text-dark mb-3 border-bottom pb-2">Thông Tin Phản Hồi & Thao Tác</h5>
+
+                <div class="mb-3">
+                    <span class="text-muted fs-7 d-block">Người bán (Seller):</span>
+                    <span class="fw-bold text-dark">@Model.SellerName</span>
+                </div>
+                <div class="mb-3">
+                    <span class="text-muted fs-7 d-block">Người mua (Buyer):</span>
+                    <span class="fw-bold text-dark">@Model.BuyerName</span>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.TrackingNumber))
+                {
+                    <div class="mb-3 p-3 bg-info bg-opacity-10 border border-info rounded-3">
+                        <span class="fw-bold text-info-emphasis d-block fs-7 mb-1"><i class="bi bi-truck me-1"></i> Mã vận chuyển trả hàng:</span>
+                        <span class="fw-bold text-dark fs-6 font-monospace">@Model.TrackingNumber</span>
+                    </div>
+                }
+
+                @if (Model.RefundAmount.HasValue && Model.RefundAmount.Value > 0)
+                {
+                    <div class="mb-3 p-3 bg-success bg-opacity-10 border border-success rounded-3">
+                        <span class="fw-bold text-success d-block fs-7 mb-1"><i class="bi bi-cash-stack me-1"></i> Số tiền hoàn trả:</span>
+                        <span class="fw-bold text-success fs-5">@Model.RefundAmount.Value.ToString("N0") ₫</span>
+                        <span class="badge bg-success ms-1">@Model.RefundType</span>
+                    </div>
+                }
+
+                <hr />
+
+                <!-- Action Controls based on Role & State -->
+                <div class="d-grid gap-2">
+                    <!-- BUYER ACTIONS -->
+                    @if (isBuyer && Model.Status == "Approved")
+                    {
+                        <button type="button" class="btn btn-primary rounded-3 fw-semibold py-2" data-bs-toggle="modal" data-bs-target="#trackingModal">
+                            <i class="bi bi-truck me-1"></i> Nhập Mã Vận Chuyển Trả Hàng
+                        </button>
+                    }
+
+                    @if (isBuyer && (Model.Status == "Requested" || Model.Status == "Approved") && !Model.IsEscalated)
+                    {
+                        <button type="button" class="btn btn-outline-danger rounded-3 fw-semibold py-2" data-bs-toggle="modal" data-bs-target="#escalateModal">
+                            <i class="bi bi-shield-exclamation me-1"></i> Yêu Cầu Admin Can Thiệp (Ask eBay to step in)
+                        </button>
+                        <form asp-action="Cancel" method="post" onsubmit="return confirm('Bạn có chắc chắn muốn hủy yêu cầu hoàn trả này?');">
+                            <input type="hidden" name="id" value="@Model.Id" />
+                            <button type="submit" class="btn btn-sm btn-link text-muted w-100 text-decoration-none">
+                                Hủy yêu cầu hoàn trả
+                            </button>
+                        </form>
+                    }
+
+                    <!-- SELLER / ADMIN ACTIONS -->
+                    @if ((isSeller || isAdmin) && (Model.Status == "Requested" || Model.Status == "Pending" || Model.Status == "Escalated"))
+                    {
+                        <form asp-action="UpdateStatus" method="post">
+                            <input type="hidden" name="id" value="@Model.Id" />
+                            <input type="hidden" name="status" value="Approved" />
+                            <button type="submit" class="btn btn-success w-100 rounded-3 fw-bold py-2 mb-2">
+                                <i class="bi bi-check-circle me-1"></i> Đồng Ý Trả Hàng (Approve)
+                            </button>
+                        </form>
+
+                        <button type="button" class="btn btn-outline-success w-100 rounded-3 fw-semibold py-2 mb-2" data-bs-toggle="modal" data-bs-target="#refundModal">
+                            <i class="bi bi-cash-coin me-1"></i> Hoàn Tiền Ngay (Full/Partial Refund)
+                        </button>
+
+                        <form asp-action="UpdateStatus" method="post" onsubmit="return confirm('Bạn có chắc muốn từ chối yêu cầu hoàn trả này?');">
+                            <input type="hidden" name="id" value="@Model.Id" />
+                            <input type="hidden" name="status" value="Rejected" />
+                            <button type="submit" class="btn btn-outline-danger w-100 rounded-3 fw-semibold py-2">
+                                <i class="bi bi-x-circle me-1"></i> Từ Chối Yêu Cầu (Reject)
+                            </button>
+                        </form>
+                    }
+
+                    @if ((isSeller || isAdmin) && (Model.Status == "Returning" || Model.Status == "Approved"))
+                    {
+                        <form asp-action="ConfirmReturned" method="post">
+                            <input type="hidden" name="id" value="@Model.Id" />
+                            <button type="submit" class="btn btn-success w-100 rounded-3 fw-bold py-3 shadow-sm">
+                                <i class="bi bi-box-seam-check me-1"></i> Xác Nhận Đã Nhận Hàng & Hoàn Tiền
+                            </button>
+                        </form>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Update Tracking -->
+<div class="modal fade" id="trackingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content rounded-4 border-0">
+            <form asp-action="UpdateTracking" method="post">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-truck me-2 text-primary"></i>Nhập Mã Vận Chuyển Trả Hàng</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">Vui lòng điền mã vận đơn (Tracking Number) sau khi bạn gửi kiện hàng trả về cho Seller qua đơn vị vận chuyển.</p>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Mã Vận Chuyển (Tracking Number)</label>
+                        <input type="text" name="trackingNumber" class="form-control rounded-3" placeholder="Ví dụ: SPX123456789VN" required />
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-primary rounded-3 fw-bold">Cập Nhật Tiến Trình</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Escalate Admin -->
+<div class="modal fade" id="escalateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content rounded-4 border-0">
+            <form asp-action="Escalate" method="post">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold text-danger"><i class="bi bi-shield-exclamation me-2"></i>Ask eBay To Step In (Yêu Cầu Admin Can Thiệp)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">Sử dụng tính năng này nếu Seller không phản hồi sau 3 ngày hoặc không đạt được thỏa thuận hoàn tiền. Admin sẽ xem xét bằng chứng và ra quyết định can thiệp.</p>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Lý do yêu cầu Admin can thiệp:</label>
+                        <textarea name="reason" class="form-control rounded-3" rows="3" placeholder="Mô tả lý do bạn cần Admin hỗ trợ..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-danger rounded-3 fw-bold">Gửi Yêu Cầu Admin Can Thiệp</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Refund (Full/Partial) -->
+<div class="modal fade" id="refundModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content rounded-4 border-0">
+            <form asp-action="UpdateStatus" method="post">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <input type="hidden" name="status" value="Refunded" />
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold text-success"><i class="bi bi-cash-coin me-2"></i>Xác Nhận Hoàn Tiền Trực Tiếp</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Hình thức hoàn tiền:</label>
+                        <select name="refundType" class="form-select rounded-3">
+                            <option value="Full">Hoàn tiền toàn phần (Full Refund: @Model.UnitPrice.ToString("N0") ₫)</option>
+                            <option value="Partial">Hoàn tiền một phần (Partial Refund)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Số tiền hoàn (VNĐ):</label>
+                        <input type="number" name="refundAmount" class="form-control rounded-3" value="@Model.UnitPrice" step="1000" />
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-success rounded-3 fw-bold">Xác Nhận Hoàn Tiền ngay</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

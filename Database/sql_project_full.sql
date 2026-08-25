@@ -1,4 +1,4 @@
-﻿-- ==========================================================
+-- ==========================================================
 -- CSDL ĐẦY ĐỦ CHO DỰ ÁN CLONE EBAY (PRN232 BLOCK 5)
 -- File gộp duy nhất: Bao gồm CSDL gốc, Bảng CartItem & Dữ liệu mẫu
 -- ==========================================================
@@ -368,6 +368,43 @@ PRIMARY KEY CLUSTERED
 	[id] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
+GO
+
+/****** Object:  Table [dbo].[Notification] ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Notification](
+	[id] [int] IDENTITY(1,1) NOT NULL PRIMARY KEY,
+	[userId] [int] NULL,
+	[userRole] [nvarchar](50) NULL,
+	[title] [nvarchar](200) NOT NULL,
+	[content] [nvarchar](max) NULL,
+	[type] [nvarchar](50) NOT NULL DEFAULT 'InApp',
+	[status] [nvarchar](50) NOT NULL DEFAULT 'Sent',
+	[scheduledAt] [datetime] NULL,
+	[sentAt] [datetime] NULL,
+	[createdBy] [int] NULL,
+	[isRead] [bit] NOT NULL DEFAULT 0,
+	[linkUrl] [nvarchar](500) NULL,
+	[createdAt] [datetime] NOT NULL DEFAULT GETDATE()
+);
+GO
+
+/****** Object:  Table [dbo].[UserNotificationRead] ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[UserNotificationRead](
+	[id] [int] IDENTITY(1,1) NOT NULL PRIMARY KEY,
+	[notificationId] [int] NOT NULL,
+	[userId] [int] NOT NULL,
+	[readAt] [datetime] NOT NULL DEFAULT GETDATE(),
+	CONSTRAINT [FK_UserNotificationRead_Notification] FOREIGN KEY ([notificationId]) REFERENCES [dbo].[Notification]([id]) ON DELETE CASCADE,
+	CONSTRAINT [FK_UserNotificationRead_User] FOREIGN KEY ([userId]) REFERENCES [dbo].[User]([id])
+);
 GO
 /****** Object:  Table [dbo].[Store]    Script Date: 8/24/2026 3:07:55 PM ******/
 SET ANSI_NULLS ON

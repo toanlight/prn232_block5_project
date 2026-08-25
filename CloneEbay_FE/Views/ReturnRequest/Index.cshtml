@@ -1,23 +1,23 @@
 @model List<CloneEbay_FE.Models.ReturnRequestViewModel>
 @{
-    ViewData["Title"] = "Quản lý yêu cầu hoàn trả đơn hàng";
+    ViewData["Title"] = "Quản lý yêu cầu hoàn trả & hoàn tiền (eBay Return Center)";
 }
 
 <div class="d-flex align-items-center justify-content-between mb-4">
     <div>
         <h3 class="fw-bold text-dark mb-1">
-            <i class="bi bi-arrow-return-left text-primary me-2"></i>Quản lý yêu cầu hoàn trả
+            <i class="bi bi-arrow-return-left text-primary me-2"></i>Trung Tâm Quản Lý Trả Hàng & Hoàn Tiền
         </h3>
-        <p class="text-muted small mb-0">Theo dõi trạng thái các đơn hàng cần hoàn trả/đổi trả sản phẩm.</p>
+        <p class="text-muted small mb-0">Theo dõi tiến trình trả hàng chuẩn eBay Money Back Guarantee.</p>
     </div>
     <a asp-action="Create" class="btn btn-primary rounded-3 px-3 py-2 fw-semibold">
-        <i class="bi bi-plus-lg me-1"></i> Gửi yêu cầu mới
+        <i class="bi bi-plus-lg me-1"></i> Gửi yêu cầu hoàn trả mới
     </a>
 </div>
 
 @if (Model == null || !Model.Any())
 {
-    <div class="simple-card text-center py-5">
+    <div class="card border-0 shadow-sm rounded-4 text-center py-5">
         <i class="bi bi-inbox text-muted display-4 mb-3 d-block"></i>
         <h5 class="fw-bold text-dark mb-1">Chưa có yêu cầu hoàn trả nào</h5>
         <p class="text-muted small mb-3">Bạn có thể tạo yêu cầu hoàn trả đối với các đơn hàng đã được giao thành công.</p>
@@ -31,75 +31,69 @@ else
         {
             var badgeClass = item.Status switch
             {
-                "Pending" => "bg-warning text-dark",
-                "Approved" => "bg-success text-white",
+                "Requested" or "Pending" => "bg-warning text-dark",
+                "Approved" => "bg-primary text-white",
+                "Returning" => "bg-info text-white",
+                "Returned" => "bg-primary text-white",
+                "Refunded" => "bg-success text-white",
                 "Rejected" => "bg-danger text-white",
                 "Cancelled" => "bg-secondary text-white",
-                _ => "bg-info text-white"
+                "Escalated" => "bg-danger text-white",
+                _ => "bg-secondary text-white"
             };
 
             var statusText = item.Status switch
             {
-                "Pending" => "Chờ xử lý",
-                "Approved" => "Đã chấp nhận",
+                "Requested" or "Pending" => "Chờ Seller phản hồi",
+                "Approved" => "Seller đã đồng ý",
+                "Returning" => "Đang gửi trả hàng",
+                "Returned" => "Seller đã nhận lại",
+                "Refunded" => "Đã hoàn tiền",
                 "Rejected" => "Đã từ chối",
                 "Cancelled" => "Đã huỷ",
+                "Escalated" => "Admin đang can thiệp",
                 _ => item.Status
             };
 
             <div class="col-12 col-md-6 col-lg-4">
-                <div class="simple-card h-100 p-4 d-flex flex-column justify-content-between shadow-sm">
+                <div class="card border-0 shadow-sm rounded-4 h-100 p-4 d-flex flex-column justify-content-between">
                     <div>
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="fw-bold text-dark fs-6">Đơn hàng #@item.OrderId</span>
+                            <span class="fw-bold text-dark fs-6">Yêu cầu #@item.Id</span>
                             <span class="badge @badgeClass px-2 py-1 fs-7">@statusText</span>
                         </div>
+
+                        <div class="d-flex align-items-center gap-3 mb-3 p-2 bg-light rounded-3 border">
+                            @if (!string.IsNullOrEmpty(item.ProductImageUrl))
+                            {
+                                <img src="@item.ProductImageUrl" class="rounded-3 border" style="width: 50px; height: 50px; object-fit: cover;" />
+                            }
+                            else
+                            {
+                                <div class="bg-secondary text-white rounded-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                    <i class="bi bi-box"></i>
+                                </div>
+                            }
+                            <div class="flex-grow-1 min-width-0">
+                                <div class="fw-bold text-dark text-truncate small mb-0">@item.ProductTitle</div>
+                                <div class="text-muted fs-7">Đơn hàng #@item.OrderId</div>
+                            </div>
+                        </div>
+
                         <p class="text-muted small mb-2">
                             <i class="bi bi-calendar-event me-1"></i>Ngày tạo: @item.CreatedAt.ToString("dd/MM/yyyy HH:mm")
                         </p>
                         <div class="p-3 bg-light rounded-3 border mb-3">
-                            <span class="fw-semibold text-secondary d-block fs-7 mb-1">Lý do hoàn trả:</span>
-                            <span class="text-dark small">@item.Reason</span>
+                            <span class="fw-semibold text-secondary d-block fs-7 mb-1">Lý do:</span>
+                            <span class="text-dark small line-clamp-2">@item.Reason</span>
                         </div>
                     </div>
 
                     <div class="pt-2 border-top d-flex align-items-center justify-content-between">
-                        @if (item.Status == "Pending")
-                        {
-                            <form asp-action="Cancel" method="post" class="d-inline">
-                                <input type="hidden" name="id" value="@item.Id" />
-                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-2 px-3" onclick="return confirm('Bạn có chắc chắn muốn huỷ yêu cầu này?');">
-                                    <i class="bi bi-x-circle me-1"></i>Huỷ yêu cầu
-                                </button>
-                            </form>
-
-                            <!-- Demo nút duyệt/từ chối cho Seller/Admin -->
-                            <div class="dropdown">
-                                <button class="btn btn-sm btn-light border dropdown-toggle rounded-2" type="button" data-bs-toggle="dropdown">
-                                    Duyệt (Seller)
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                                    <li>
-                                        <form asp-action="UpdateStatus" method="post">
-                                            <input type="hidden" name="id" value="@item.Id" />
-                                            <input type="hidden" name="status" value="Approved" />
-                                            <button type="submit" class="dropdown-item text-success"><i class="bi bi-check-circle me-2"></i>Chấp nhận</button>
-                                        </form>
-                                    </li>
-                                    <li>
-                                        <form asp-action="UpdateStatus" method="post">
-                                            <input type="hidden" name="id" value="@item.Id" />
-                                            <input type="hidden" name="status" value="Rejected" />
-                                            <button type="submit" class="dropdown-item text-danger"><i class="bi bi-x-circle me-2"></i>Từ chối</button>
-                                        </form>
-                                    </li>
-                                </ul>
-                            </div>
-                        }
-                        else
-                        {
-                            <span class="text-muted fs-7">Mã yêu cầu: #@item.Id</span>
-                        }
+                        <span class="text-muted fs-7">@item.Evidences.Count ảnh bằng chứng</span>
+                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold">
+                            Xử lý & Xem tiến trình <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
                     </div>
                 </div>
             </div>

@@ -39,6 +39,7 @@ try
     builder.Services.AddScoped<ClonEbay_CoreAPI.Repositories.Interfaces.IReturnRequestRepository, ClonEbay_CoreAPI.Repositories.Implementations.ReturnRequestRepository>();
     builder.Services.AddScoped<ClonEbay_CoreAPI.Repositories.Interfaces.IReviewRepository, ClonEbay_CoreAPI.Repositories.Implementations.ReviewRepository>();
     builder.Services.AddScoped<ClonEbay_CoreAPI.Repositories.Interfaces.ICouponRepository, ClonEbay_CoreAPI.Repositories.Implementations.CouponRepository>();
+    builder.Services.AddScoped<ClonEbay_CoreAPI.Repositories.Interfaces.INotificationRepository, ClonEbay_CoreAPI.Repositories.Implementations.NotificationRepository>();
 
     // 3. Đăng ký Services (Business Logic Layer)
     builder.Services.AddScoped<IEmailService, EmailService>();
