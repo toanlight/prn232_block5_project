@@ -619,6 +619,19 @@
             }
         );
 
+        connection.on(
+            "ReceiveAuctionNotification",
+            function (data) {
+                console.log("ReceiveAuctionNotification:", data);
+                handleIncomingNotification(
+                    data,
+                    "Auction",
+                    "bi-hammer",
+                    data?.type === "AUCTION_WON" ? "bg-success" : "bg-warning"
+                );
+            }
+        );
+
 
         // =====================================================
         // 7. SIGNALR RECONNECTING

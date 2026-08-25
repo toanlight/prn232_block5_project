@@ -59,7 +59,15 @@
 
         @* Giá *@
         <div class="display-6 fw-bold text-danger mb-3">
-            @Model.Price.ToString("N0") ₫
+            @if (Model.Auction is not null)
+            {
+                <span id="auctionCurrentPrice">@Model.Auction.CurrentPrice.ToString("N0")</span><span> ₫</span>
+                <div class="fs-6 fw-normal text-muted">Giá hiện tại</div>
+            }
+            else
+            {
+                <span>@Model.Price.ToString("N0") ₫</span>
+            }
         </div>
 
         @* Mô tả *@
@@ -97,17 +105,122 @@
             </div>
         }
 
-        @* Thời gian đấu giá *@
-        @if (Model.IsAuction && Model.AuctionEndTime.HasValue)
+        @if (Model.IsAuction)
         {
-            <div class="alert alert-warning py-2 mb-3">
-                <i class="bi bi-clock"></i>
-                Kết thúc đấu giá: <strong>@Model.AuctionEndTime.Value.ToString("dd/MM/yyyy HH:mm")</strong>
-            </div>
-        }
+            @if (Model.Auction is null)
+            {
+                <div class="alert alert-warning mb-0">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    Chưa thể tải thông tin phiên đấu giá.
+                </div>
+            }
+            else
+            {
+                var auctionActive = Model.Auction.Status.Equals("Active", StringComparison.OrdinalIgnoreCase);
+                var auctionStatusText = Model.Auction.Status.ToLowerInvariant() switch
+                {
+                    "active" => "Đang diễn ra",
+                    "sold" => "Đã bán",
+                    "unsold" => "Không có người thắng",
+                    _ => "Đã kết thúc"
+                };
+                <div id="auctionPanel"
+                     class="border border-warning rounded-4 p-3 bg-warning bg-opacity-10"
+                     data-product-id="@Model.Id"
+                     data-end-time="@Model.Auction.EndTime.ToString("O")">
+                    <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                        <span class="fw-semibold">
+                            <i class="bi bi-hammer me-1"></i>Phiên đấu giá
+                        </span>
+                        <span id="auctionStatus" class="badge @(auctionActive ? "bg-success" : "bg-secondary")">
+                            @auctionStatusText
+                        </span>
+                    </div>
 
-        @* Nút thêm vào giỏ hàng *@
-        @if (loggedIn)
+                    <div class="row g-2 small mb-3">
+                        <div class="col-6">
+                            <div class="text-muted">Số lượt đặt giá</div>
+                            <strong id="auctionBidCount">@Model.Auction.BidCount</strong>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-muted">Bước giá</div>
+                            <strong>@Model.Auction.BidIncrement.ToString("N0") ₫</strong>
+                        </div>
+                        <div class="col-12">
+                            <div class="text-muted">Thời gian còn lại</div>
+                            <strong id="auctionCountdown">Đang tính...</strong>
+                        </div>
+                    </div>
+
+                    @if (auctionActive && Model.Auction.IsCurrentUserLeading)
+                    {
+                        <div class="alert alert-success py-2 small mb-3">
+                            <i class="bi bi-trophy-fill me-1"></i>Bạn đang dẫn đầu.
+                            @if (Model.Auction.CurrentUserBid.HasValue)
+                            {
+                                <span>Giá bạn đã đặt: <strong>@Model.Auction.CurrentUserBid.Value.ToString("N0") ₫</strong>.</span>
+                            }
+                        </div>
+                    }
+                    else if (!auctionActive && Model.Auction.IsCurrentUserLeading)
+                    {
+                        <div class="alert alert-success py-2 small mb-3">
+                            <i class="bi bi-trophy-fill me-1"></i>Bạn là người thắng phiên đấu giá này.
+                        </div>
+                    }
+
+                    @if (auctionActive)
+                    {
+                        @if (loggedIn)
+                        {
+                            <form asp-controller="Products" asp-action="PlaceBid" method="post" id="placeBidForm">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="productId" value="@Model.Id" />
+                                <label for="bidAmount" class="form-label fw-semibold">Giá bạn muốn đặt</label>
+                                <div class="input-group">
+                                    <input id="bidAmount"
+                                           name="bidAmount"
+                                           type="number"
+                                           min="@Model.Auction.MinimumNextBid.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
+                                           max="99949999.99"
+                                           step="1000"
+                                           value="@Model.Auction.MinimumNextBid.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
+                                           class="form-control"
+                                           required />
+                                    <span class="input-group-text">₫</span>
+                                    <button type="submit" class="btn btn-warning fw-semibold">
+                                        <i class="bi bi-hammer me-1"></i>Đặt giá
+                                    </button>
+                                </div>
+                                <div class="form-text">
+                                    Tối thiểu <strong id="auctionMinimumBid">@Model.Auction.MinimumNextBid.ToString("N0") ₫</strong>.
+                                    Giá đặt sẽ xuất hiện trong lịch sử dưới tên đã được ẩn một phần.
+                                </div>
+                            </form>
+                        }
+                        else
+                        {
+                            <a asp-controller="Auth"
+                               asp-action="Login"
+                               asp-route-returnUrl="/Products/Details/@Model.Id"
+                               class="btn btn-warning w-100 fw-semibold">
+                                Đăng nhập để đặt giá
+                            </a>
+                        }
+                    }
+                    else if (Model.Auction.OrderId.HasValue)
+                    {
+                        <a asp-controller="Payment"
+                           asp-action="PayPal"
+                           asp-route-orderId="@Model.Auction.OrderId"
+                           class="btn btn-primary w-100 fw-semibold">
+                            <i class="bi bi-paypal me-1"></i>Thanh toán đơn thắng đấu giá
+                        </a>
+                    }
+                </div>
+            }
+        }
+        else if (loggedIn)
         {
             @* Đã đăng nhập → thêm thẳng vào giỏ server *@
             <form asp-controller="Cart" asp-action="Add" method="post" class="d-flex gap-2 align-items-center">
@@ -155,6 +268,36 @@
 
     </div>
 </div>
+
+@if (Model.Auction?.RecentBids.Any() == true)
+{
+    <section class="mt-4">
+        <div class="bg-white rounded-4 shadow-sm p-4">
+            <h2 class="h5 mb-3"><i class="bi bi-clock-history me-2"></i>Lịch sử đặt giá gần đây</h2>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Người đặt</th>
+                            <th>Giá đặt</th>
+                            <th class="text-end">Thời gian</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auctionBidHistory">
+                        @foreach (var bid in Model.Auction.RecentBids)
+                        {
+                            <tr class="@(bid.IsCurrentUser ? "table-success" : null)">
+                                <td>@bid.Bidder</td>
+                                <td class="fw-semibold">@bid.Amount.ToString("N0") ₫</td>
+                                <td class="text-end text-muted">@bid.BidTime.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+}
 
 @* ── Phần đánh giá ── *@
 <section class="mt-5">
@@ -245,5 +388,64 @@
             b.classList.replace('btn-success', 'btn-primary');
         }, 1500);
     });
+
+    // Đồng hồ đếm ngược và cập nhật giá đấu theo thời gian thực.
+    const auctionPanel = document.getElementById('auctionPanel');
+    if (auctionPanel) {
+        const productId = Number(auctionPanel.dataset.productId);
+        const endTime = new Date(auctionPanel.dataset.endTime);
+        const countdown = document.getElementById('auctionCountdown');
+        const money = value => new Intl.NumberFormat('vi-VN').format(value) + ' ₫';
+
+        const updateCountdown = () => {
+            const remaining = endTime.getTime() - Date.now();
+            if (remaining <= 0) {
+                countdown.textContent = 'Đã kết thúc';
+                document.querySelector('#placeBidForm button[type="submit"]')?.setAttribute('disabled', 'disabled');
+                return;
+            }
+
+            const totalSeconds = Math.floor(remaining / 1000);
+            const days = Math.floor(totalSeconds / 86400);
+            const hours = Math.floor((totalSeconds % 86400) / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            countdown.textContent = `${days > 0 ? days + ' ngày ' : ''}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        };
+
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+
+        if (typeof signalR !== 'undefined') {
+            const auctionConnection = new signalR.HubConnectionBuilder()
+                .withUrl('http://localhost:5180/hubs/auction')
+                .withAutomaticReconnect([0, 2000, 5000, 10000])
+                .build();
+
+            const joinAuction = () => auctionConnection.invoke('JoinAuction', productId);
+
+            auctionConnection.on('AuctionUpdated', data => {
+                if (Number(data.productId) !== productId) return;
+                document.getElementById('auctionCurrentPrice').textContent = new Intl.NumberFormat('vi-VN').format(data.currentPrice);
+                document.getElementById('auctionBidCount').textContent = data.bidCount;
+                document.getElementById('auctionMinimumBid').textContent = money(data.minimumNextBid);
+                const input = document.getElementById('bidAmount');
+                if (input) {
+                    input.min = data.minimumNextBid;
+                    if (Number(input.value) < Number(data.minimumNextBid)) input.value = data.minimumNextBid;
+                }
+            });
+
+            auctionConnection.on('AuctionEnded', data => {
+                if (Number(data.productId) !== productId) return;
+                document.getElementById('auctionStatus').textContent = data.type === 'SOLD' ? 'Đã bán' : 'Đã kết thúc';
+                countdown.textContent = 'Đã kết thúc';
+                document.querySelector('#placeBidForm button[type="submit"]')?.setAttribute('disabled', 'disabled');
+            });
+
+            auctionConnection.onreconnected(joinAuction);
+            auctionConnection.start().then(joinAuction).catch(error => console.warn('Không thể kết nối AuctionHub:', error));
+        }
+    }
 </script>
 }
