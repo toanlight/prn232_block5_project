@@ -1,8 +1,609 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@model CloneEbay_FE.Models.HomeLandingViewModel
+@{
+    ViewData["Title"] = "CloneEbay - Sàn Thương Mại Điện Tử & Đấu Giá Trực Tuyến Số 1";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<!-- Custom CSS for Landing Page Aesthetics -->
+<style>
+    :root {
+        --ebay-blue: #0064d2;
+        --ebay-red: #e53238;
+        --ebay-yellow: #f5af02;
+        --ebay-green: #86b817;
+        --hero-bg: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #31104b 100%);
+        --accent-glow: radial-gradient(circle at 50% 30%, rgba(99, 102, 241, 0.25) 0%, rgba(0, 0, 0, 0) 70%);
+    }
+
+    .hero-landing {
+        background: var(--hero-bg);
+        position: relative;
+        overflow: hidden;
+        border-radius: 1.75rem;
+        color: #ffffff;
+        padding: 4.5rem 2rem 5rem 2rem;
+        box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.45);
+    }
+
+    .hero-landing::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: var(--accent-glow);
+        pointer-events: none;
+    }
+
+    .hero-glass-card {
+        background: rgba(255, 255, 255, 0.07);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 1.25rem;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .hero-glass-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .badge-live-pulse {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(229, 50, 56, 0.2);
+        border: 1px solid rgba(229, 50, 56, 0.5);
+        color: #ff6b6b;
+        padding: 0.35rem 0.85rem;
+        border-radius: 2rem;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+
+    .badge-live-pulse .dot {
+        width: 8px;
+        height: 8px;
+        background-color: #ff3b30;
+        border-radius: 50%;
+        animation: pulse-ring 1.5s infinite;
+    }
+
+    @@keyframes pulse-ring {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(255, 59, 48, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
+    }
+
+    .search-hero-box {
+        background: #ffffff;
+        border-radius: 1rem;
+        padding: 0.4rem;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+    }
+
+    .category-card {
+        background: #ffffff;
+        border-radius: 1rem;
+        padding: 1.25rem 1rem;
+        text-align: center;
+        border: 1px solid #f1f5f9;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        text-decoration: none;
+        color: #1e293b;
+        display: block;
+    }
+
+    .category-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 15px 30px rgba(0, 100, 210, 0.12);
+        border-color: #cbd5e1;
+        color: var(--ebay-blue);
+    }
+
+    .category-icon-wrapper {
+        width: 56px;
+        height: 56px;
+        border-radius: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 0.75rem auto;
+        font-size: 1.6rem;
+        transition: transform 0.3s ease;
+    }
+
+    .category-card:hover .category-icon-wrapper {
+        transform: scale(1.1) rotate(3deg);
+    }
+
+    .product-card-landing {
+        border: 1px solid #e2e8f0;
+        border-radius: 1.25rem;
+        background: #ffffff;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .product-card-landing:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 20px 35px rgba(0, 0, 0, 0.08);
+        border-color: #cbd5e1;
+    }
+
+    .product-img-container {
+        height: 210px;
+        position: relative;
+        background: #f8fafc;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .product-img-container img {
+        max-height: 90%;
+        max-width: 90%;
+        object-fit: contain;
+        transition: transform 0.4s ease;
+    }
+
+    .product-card-landing:hover .product-img-container img {
+        transform: scale(1.08);
+    }
+
+    .feature-box-landing {
+        background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+        border: 1px solid #e2e8f0;
+        border-radius: 1.25rem;
+        padding: 2rem;
+        height: 100%;
+        transition: all 0.3s ease;
+    }
+
+    .feature-box-landing:hover {
+        border-color: var(--ebay-blue);
+        box-shadow: 0 15px 30px rgba(0, 100, 210, 0.08);
+        transform: translateY(-4px);
+    }
+
+    .gradient-text {
+        background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .cta-banner {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        border-radius: 1.75rem;
+        color: #ffffff;
+        padding: 3.5rem 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-number {
+        font-size: 2.25rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+</style>
+
+<div class="container py-2">
+    <!-- 🚀 HERO LANDING SECTION -->
+    <section class="hero-landing mb-5">
+        <div class="row align-items-center position-relative" style="z-index: 2;">
+            <div class="col-lg-7 text-center text-lg-start mb-4 mb-lg-0">
+                <div class="badge-live-pulse mb-3">
+                    <span class="dot"></span>
+                    <span>⚡ Sàn Thương Mại Điện Tử & Đấu Giá Trực Tuyến Hàng Đầu</span>
+                </div>
+                
+                <h1 class="display-4 fw-extrabold text-white lh-tight mb-3">
+                    Mua Bán, Đấu Giá & <br class="d-none d-md-inline" />
+                    <span class="gradient-text">Săn Deal Đỉnh Cao</span> Chuẩn eBay
+                </h1>
+
+                <p class="lead text-slate-300 fs-5 mb-4 text-light opacity-90" style="max-width: 600px;">
+                    Trải nghiệm hệ thống đấu giá Real-Time bằng SignalR, bảo đảm hoàn tiền <strong>Money Back Guarantee 100%</strong> và thông báo ưu đãi tức thì.
+                </p>
+
+                <!-- Search Bar inside Hero -->
+                <form asp-controller="Products" asp-action="Index" method="get" class="search-hero-box d-flex align-items-center gap-2 mb-4">
+                    <div class="input-group input-group-lg border-0">
+                        <span class="input-group-text bg-transparent border-0 text-muted ps-3">
+                            <i class="bi bi-search fs-5"></i>
+                        </span>
+                        <input type="text" name="search" class="form-control border-0 shadow-none fs-6" placeholder="Tìm sản phẩm, thương hiệu, mã đố..." />
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg rounded-3 px-4 py-2 text-nowrap fw-bold shadow-sm" style="background: var(--ebay-blue);">
+                        Tìm kiếm
+                    </button>
+                </form>
+
+                <!-- Quick Pills -->
+                <div class="d-flex flex-wrap gap-2 align-items-center justify-content-center justify-content-lg-start text-slate-300 small">
+                    <span class="opacity-75"><i class="bi bi-fire text-warning me-1"></i>Xu hướng:</span>
+                    <a asp-controller="Products" asp-action="Index" asp-route-search="iPhone" class="badge bg-white bg-opacity-10 text-white text-decoration-none px-3 py-2 rounded-pill hover-bg-opacity-20">iPhone 15</a>
+                    <a asp-controller="Products" asp-action="Index" asp-route-search="MacBook" class="badge bg-white bg-opacity-10 text-white text-decoration-none px-3 py-2 rounded-pill hover-bg-opacity-20">MacBook M3</a>
+                    <a asp-controller="Products" asp-action="Index" asp-route-search="Watch" class="badge bg-white bg-opacity-10 text-white text-decoration-none px-3 py-2 rounded-pill hover-bg-opacity-20">Smartwatch</a>
+                    <a asp-controller="Products" asp-action="Index" asp-route-search="Sneaker" class="badge bg-white bg-opacity-10 text-white text-decoration-none px-3 py-2 rounded-pill hover-bg-opacity-20">Giày Sneaker</a>
+                </div>
+            </div>
+
+            <!-- Hero Glass Stats & Visual Card -->
+            <div class="col-lg-5">
+                <div class="hero-glass-card p-4">
+                    <div class="d-flex align-items-center justify-content-between mb-3 border-bottom border-white border-opacity-10 pb-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-primary bg-opacity-20 p-3 rounded-4 text-primary fs-3">
+                                <i class="bi bi-shield-check text-info"></i>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold text-white mb-0 fs-6">eBay Money Back Guarantee</h6>
+                                <span class="text-white opacity-75 fs-7">Bảo vệ người mua 100%</span>
+                            </div>
+                        </div>
+                        <span class="badge bg-success rounded-pill px-3 py-2">An toàn 100%</span>
+                    </div>
+
+                    <div class="row g-3 text-center">
+                        <div class="col-6">
+                            <div class="p-3 bg-white bg-opacity-5 rounded-3 border border-white border-opacity-10">
+                                <div class="stat-number">⚡ Real-Time</div>
+                                <div class="text-white opacity-75 fs-7 mt-1">Đấu giá trực tiếp</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-3 bg-white bg-opacity-5 rounded-3 border border-white border-opacity-10">
+                                <div class="stat-number">🔔 SignalR</div>
+                                <div class="text-white opacity-75 fs-7 mt-1">Thông báo tức thì</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-top border-white border-opacity-10 text-center">
+                        <a asp-controller="Products" asp-action="Index" class="btn btn-outline-light w-100 rounded-3 py-2 fw-semibold">
+                            <i class="bi bi-grid-fill me-2"></i>Xem Tất Cả Sản Phẩm & Đấu Giá
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 🏷️ CATEGORY GRID SECTION -->
+    <section class="mb-5">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <div>
+                <h3 class="fw-bold text-dark mb-1">
+                    <i class="bi bi-grid-3x3-gap-fill text-primary me-2"></i>Danh Mục Nổi Bật
+                </h3>
+                <p class="text-muted small mb-0">Khám phá hàng ngàn danh mục sản phẩm đa dạng trên CloneEbay</p>
+            </div>
+            <a asp-controller="Products" asp-action="Index" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold">
+                Xem tất cả <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+
+        <div class="row g-3">
+            @{
+                var catIcons = new Dictionary<string, (string Icon, string BgColor, string Color)>
+                {
+                    { "Điện thoại & Máy tính", ("bi-laptop", "#e0f2fe", "#0284c7") },
+                    { "Thời trang & Phụ kiện", ("bi-bag-check", "#fce7f3", "#db2777") },
+                    { "Đồng hồ & Trang sức", ("bi-watch", "#fef3c7", "#d97706") },
+                    { "Đồ sưu tầm & Nghệ thuật", ("bi-trophy", "#f3e8ff", "#9333ea") },
+                    { "Gia dụng & Đời sống", ("bi-house-heart", "#dcfce7", "#16a34a") },
+                    { "Xe cộ & Phụ tùng", ("bi-car-front", "#fee2e2", "#dc2626") }
+                };
+            }
+
+            @if (Model.Categories != null && Model.Categories.Any())
+            {
+                foreach (var cat in Model.Categories.Take(6))
+                {
+                    var style = catIcons.ContainsKey(cat.Name) ? catIcons[cat.Name] : ("bi-tag", "#e2e8f0", "#475569");
+                    <div class="col-6 col-md-4 col-lg-2">
+                        <a asp-controller="Products" asp-action="Index" asp-route-categoryId="@cat.Id" class="category-card">
+                            <div class="category-icon-wrapper" style="background-color: @style.Item2; color: @style.Item3;">
+                                <i class="bi @style.Item1"></i>
+                            </div>
+                            <div class="fw-bold fs-7 text-truncate">@cat.Name</div>
+                        </a>
+                    </div>
+                }
+            }
+            else
+            {
+                <!-- Fallback Static Categories if DB is empty -->
+                <div class="col-6 col-md-4 col-lg-2">
+                    <a asp-controller="Products" asp-action="Index" class="category-card">
+                        <div class="category-icon-wrapper" style="background-color: #e0f2fe; color: #0284c7;">
+                            <i class="bi bi-laptop"></i>
+                        </div>
+                        <div class="fw-bold fs-7 text-truncate">Điện thoại & PC</div>
+                    </a>
+                </div>
+                <div class="col-6 col-md-4 col-lg-2">
+                    <a asp-controller="Products" asp-action="Index" class="category-card">
+                        <div class="category-icon-wrapper" style="background-color: #fce7f3; color: #db2777;">
+                            <i class="bi bi-bag-check"></i>
+                        </div>
+                        <div class="fw-bold fs-7 text-truncate">Thời trang</div>
+                    </a>
+                </div>
+                <div class="col-6 col-md-4 col-lg-2">
+                    <a asp-controller="Products" asp-action="Index" class="category-card">
+                        <div class="category-icon-wrapper" style="background-color: #fef3c7; color: #d97706;">
+                            <i class="bi bi-watch"></i>
+                        </div>
+                        <div class="fw-bold fs-7 text-truncate">Đồng hồ & Nữ trang</div>
+                    </a>
+                </div>
+                <div class="col-6 col-md-4 col-lg-2">
+                    <a asp-controller="Products" asp-action="Index" class="category-card">
+                        <div class="category-icon-wrapper" style="background-color: #f3e8ff; color: #9333ea;">
+                            <i class="bi bi-trophy"></i>
+                        </div>
+                        <div class="fw-bold fs-7 text-truncate">Đồ sưu tầm</div>
+                    </a>
+                </div>
+                <div class="col-6 col-md-4 col-lg-2">
+                    <a asp-controller="Products" asp-action="Index" class="category-card">
+                        <div class="category-icon-wrapper" style="background-color: #dcfce7; color: #16a34a;">
+                            <i class="bi bi-house-heart"></i>
+                        </div>
+                        <div class="fw-bold fs-7 text-truncate">Gia dụng</div>
+                    </a>
+                </div>
+                <div class="col-6 col-md-4 col-lg-2">
+                    <a asp-controller="Products" asp-action="Index" class="category-card">
+                        <div class="category-icon-wrapper" style="background-color: #fee2e2; color: #dc2626;">
+                            <i class="bi bi-car-front"></i>
+                        </div>
+                        <div class="fw-bold fs-7 text-truncate">Phụ tùng ô tô</div>
+                    </a>
+                </div>
+            }
+        </div>
+    </section>
+
+    <!-- ⚡ LIVE AUCTIONS SECTION -->
+    @if (Model.AuctionProducts != null && Model.AuctionProducts.Any())
+    {
+        <section class="mb-5">
+            <div class="p-4 rounded-4" style="background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); border: 1px solid #fed7aa;">
+                <div class="d-flex align-items-center justify-content-between mb-4">
+                    <div>
+                        <div class="badge bg-danger text-white rounded-pill px-3 py-1 mb-2 fw-semibold">
+                            <i class="bi bi-lightning-charge-fill me-1"></i>Đang Sôi Nổi
+                        </div>
+                        <h3 class="fw-bold text-dark mb-1">
+                            <i class="bi bi-hammer text-danger me-2"></i>Phiên Đấu Giá Real-Time Hot
+                        </h3>
+                        <p class="text-muted small mb-0">Đặt giá trực tiếp bằng công nghệ SignalR, tự động đếm ngược và chốt đơn tức thì.</p>
+                    </div>
+                    <a asp-controller="Products" asp-action="Index" class="btn btn-danger rounded-3 px-3 py-2 fw-bold shadow-sm">
+                        Khám phá đấu giá <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+
+                <div class="row g-3">
+                    @foreach (var item in Model.AuctionProducts.Take(4))
+                    {
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <div class="product-card-landing h-100 d-flex flex-column justify-content-between">
+                                <div>
+                                    <div class="product-img-container">
+                                        <span class="badge bg-danger position-absolute top-0 start-0 m-2 rounded-pill px-2 py-1 fs-7">
+                                            <i class="bi bi-broadcast me-1"></i>Đấu giá
+                                        </span>
+                                        <img src="@(string.IsNullOrEmpty(item.ImageUrl) ? "https://via.placeholder.com/300x200?text=eBay+Product" : item.ImageUrl)" alt="@item.Title" />
+                                    </div>
+                                    <div class="p-3">
+                                        <span class="text-muted fs-7 d-block mb-1">@item.CategoryName</span>
+                                        <h6 class="fw-bold text-dark text-truncate mb-2" title="@item.Title">@item.Title</h6>
+                                        
+                                        <div class="d-flex align-items-baseline gap-2 mb-2">
+                                            <span class="fs-7 text-muted">Giá hiện tại:</span>
+                                            <span class="fw-bold fs-5 text-danger">@item.Price.ToString("N0") VNĐ</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="p-3 pt-0">
+                                    <a asp-controller="Products" asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-danger w-100 rounded-3 fw-bold btn-sm py-2">
+                                        <i class="bi bi-hammer me-1"></i> Đặt Giá Ngay
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </section>
+    }
+
+    <!-- 🛍️ FEATURED PRODUCTS SECTION -->
+    <section class="mb-5">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <div>
+                <h3 class="fw-bold text-dark mb-1">
+                    <i class="bi bi-stars text-warning me-2"></i>Sản Phẩm Nổi Bật Dành Cho Bạn
+                </h3>
+                <p class="text-muted small mb-0">Hàng ngàn ưu đãi hấp dẫn từ các Shop uy tín trên toàn quốc</p>
+            </div>
+            <a asp-controller="Products" asp-action="Index" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold">
+                Xem thêm sản phẩm <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+
+        <div class="row g-3">
+            @if (Model.FeaturedProducts != null && Model.FeaturedProducts.Any())
+            {
+                foreach (var item in Model.FeaturedProducts.Take(8))
+                {
+                    <div class="col-6 col-md-4 col-lg-3">
+                        <div class="product-card-landing h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="product-img-container">
+                                    @if (item.IsAuction)
+                                    {
+                                        <span class="badge bg-danger position-absolute top-0 start-0 m-2 rounded-pill px-2 py-1 fs-7">Đấu giá</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-primary position-absolute top-0 start-0 m-2 rounded-pill px-2 py-1 fs-7">Mua ngay</span>
+                                    }
+                                    <img src="@(string.IsNullOrEmpty(item.ImageUrl) ? "https://via.placeholder.com/300x200?text=eBay+Item" : item.ImageUrl)" alt="@item.Title" />
+                                </div>
+
+                                <div class="p-3">
+                                    <span class="text-muted fs-7 d-block mb-1">@(item.CategoryName ?? "Sản phẩm")</span>
+                                    <h6 class="fw-bold text-dark text-truncate mb-2" title="@item.Title">@item.Title</h6>
+                                    
+                                    <div class="d-flex align-items-center gap-1 mb-2">
+                                        <div class="text-warning fs-7">
+                                            @for (int i = 1; i <= 5; i++)
+                                            {
+                                                if (i <= Math.Round(item.AverageRating))
+                                                {
+                                                    <i class="bi bi-star-fill"></i>
+                                                }
+                                                else
+                                                {
+                                                    <i class="bi bi-star"></i>
+                                                }
+                                            }
+                                        </div>
+                                        <span class="text-muted fs-7">(@item.ReviewCount)</span>
+                                    </div>
+
+                                    <div class="fw-bold fs-5 text-primary">@item.Price.ToString("N0") VNĐ</div>
+                                </div>
+                            </div>
+
+                            <div class="p-3 pt-0">
+                                <a asp-controller="Products" asp-action="Details" asp-route-id="@item.Id" class="btn btn-primary w-100 rounded-3 fw-bold btn-sm py-2" style="background: var(--ebay-blue);">
+                                    <i class="bi bi-eye me-1"></i> Xem Chi Tiết
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="col-12 text-center py-5 bg-light rounded-4 border">
+                    <i class="bi bi-box-seam text-muted display-4 d-block mb-3"></i>
+                    <h5 class="fw-bold">Đang cập nhật danh sách sản phẩm</h5>
+                    <p class="text-muted small">Hãy quay lại sau để cập nhật những deal sốc nhất!</p>
+                </div>
+            }
+        </div>
+    </section>
+
+    <!-- 🛡️ EBAY ECOSYSTEM HIGHLIGHTS -->
+    <section class="mb-5">
+        <div class="text-center mb-5" style="max-width: 700px; margin: 0 auto;">
+            <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2 fw-semibold mb-2">Hệ Sinh Thái CloneEbay</span>
+            <h2 class="fw-bold text-dark">Giải Pháp Mua Sắm & Đấu Giá Toàn Diện</h2>
+            <p class="text-muted">Mang đến cho người dùng trải nghiệm mua sắm an toàn, tốc độ cao với chuẩn mực bảo vệ người tiêu dùng quốc tế.</p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="feature-box-landing text-center">
+                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px; font-size: 1.75rem;">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-2">eBay Money Back</h5>
+                    <p class="text-muted small mb-0">Hoàn tiền 100% nếu sản phẩm không khớp mô tả, hàng giả hoặc không nhận được đơn hàng.</p>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="feature-box-landing text-center">
+                    <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px; font-size: 1.75rem;">
+                        <i class="bi bi-lightning-charge"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-2">Đấu Giá Real-Time</h5>
+                    <p class="text-muted small mb-0">Công nghệ SignalR giúp đẩy giá trực tiếp từng giây, nhảy thông báo ai đang dẫn đầu lập tức.</p>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="feature-box-landing text-center">
+                    <div class="bg-warning bg-opacity-10 text-warning rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px; font-size: 1.75rem;">
+                        <i class="bi bi-bell"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-2">Thông Báo Tức Thì</h5>
+                    <p class="text-muted small mb-0">Tự động báo đơn hàng, mã giảm giá hot và tiến trình trả hàng ngay lập tức trên màn hình.</p>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="feature-box-landing text-center">
+                    <div class="bg-success bg-opacity-10 text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px; font-size: 1.75rem;">
+                        <i class="bi bi-credit-card"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-2">PayPal & Bảo Mật</h5>
+                    <p class="text-muted small mb-0">Tích hợp thanh toán PayPal sandbox minh bạch, bảo mật thông tin tài khoản tuyệt đối.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 🎟️ ACTIVE COUPONS PROMOTION BANNER -->
+    @if (Model.ActiveCoupons != null && Model.ActiveCoupons.Any())
+    {
+        <section class="mb-5">
+            <div class="p-4 rounded-4 shadow-lg text-white" style="background: linear-gradient(135deg, #1e1b4b 0%, #31104b 50%, #4338ca 100%) !important;">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div>
+                        <span class="badge bg-warning text-dark fw-bold rounded-pill px-3 py-1 mb-2">Mã Giảm Giá Hot</span>
+                        <h4 class="fw-bold mb-0 text-white"><i class="bi bi-ticket-perforated me-2"></i>Săn Mã Khuyến Mãi Ngay Hôm Nay</h4>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    @foreach (var coupon in Model.ActiveCoupons.Take(3))
+                    {
+                        <div class="col-12 col-md-4">
+                            <div class="p-3 rounded-3 d-flex justify-content-between align-items-center" style="background: rgba(255, 255, 255, 0.15) !important; backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.25) !important;">
+                                <div>
+                                    <span class="badge bg-warning text-dark fw-bold mb-1">Giảm @coupon.DiscountPercent%</span>
+                                    <div class="fw-bold fs-4 text-white" style="letter-spacing: 0.5px;">@coupon.Code</div>
+                                </div>
+                                <a asp-controller="Coupon" asp-action="Index" class="btn btn-light text-primary btn-sm rounded-pill fw-bold px-3 py-2 shadow-sm">
+                                    Dùng ngay
+                                </a>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </section>
+    }
+
+    <!-- 📢 CTA BANNER FOR BUYERS & SELLERS -->
+    <section class="cta-banner text-center text-lg-start mb-4">
+        <div class="row align-items-center">
+            <div class="col-lg-8 mb-4 mb-lg-0">
+                <h2 class="display-6 fw-bold text-white mb-2">Bắt Đầu Mua Bán Ngay Hôm Nay!</h2>
+                <p class="text-slate-300 lead mb-0 opacity-90 fs-6">
+                    Dù bạn muốn săn đồ xịn với giá đấu cực hời hay mở gian hàng tiếp cận triệu người mua, CloneEbay luôn đồng hành cùng bạn.
+                </p>
+            </div>
+            <div class="col-lg-4 text-lg-end d-flex flex-column flex-sm-row justify-content-lg-end gap-2">
+                <a asp-controller="Products" asp-action="Index" class="btn btn-primary btn-lg rounded-3 fw-bold px-4 py-3 shadow" style="background: var(--ebay-blue);">
+                    <i class="bi bi-bag-check me-2"></i>Mua Sắm Ngay
+                </a>
+                <a asp-controller="Coupon" asp-action="Create" class="btn btn-outline-light btn-lg rounded-3 fw-semibold px-4 py-3">
+                    <i class="bi bi-shop me-2"></i>Tạo Mã Giảm Giá
+                </a>
+            </div>
+        </div>
+    </section>
 </div>
